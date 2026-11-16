@@ -1,0 +1,37 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: VPN Connection Guide
+Category: vpn
+Department: IT
+Access-Level: internal
+Version: 1
+Last-Reviewed: 2025-02-14
+
+## 1. Overview
+Acme Demo Corp employees use the Acme SecureLink VPN client to reach internal systems such as the intranet, file shares and the HR portal when working outside the office. The VPN is required for all remote access to internal resources.
+
+## 2. Prerequisites
+- A company-managed laptop with the Acme SecureLink client installed. If it is missing, install it from Acme Software Center.
+- Your company username and password.
+- Your enrolled multi-factor authentication (MFA) device with the Acme Authenticator app.
+
+## 3. Connecting from home
+1. Open the Acme SecureLink client from the Start menu or system tray.
+2. In the Server field, enter vpn.acme-demo.example (it is pre-filled on managed laptops).
+3. Click Connect and sign in with your company username and password.
+4. Approve the MFA prompt in Acme Authenticator by entering the two-digit number shown on screen.
+5. Wait for the status to change to "Connected" and for the tray icon to turn green.
+6. Open the intranet at intranet.acme-demo.example to confirm that access works.
+
+## 4. Disconnecting
+Right-click the tray icon and choose Disconnect. The VPN also disconnects automatically after 12 hours; reconnect when prompted.
+
+## 5. Common errors
+- Error SL-401 (authentication failed): re-enter your password. After 5 failed attempts the account locks for 15 minutes.
+- Error SL-512 (connection timed out): the home network may block UDP port 443. Switch the client to "TCP fallback" under Settings > Connection, or try a different network such as a phone hotspot.
+- Error SL-603 (certificate invalid): check that your laptop date and time are correct, then restart the client.
+
+## 6. Split tunneling
+Split tunneling is disabled. All traffic from a managed laptop goes through the VPN while it is connected.
+
+## 7. Getting help
+If the steps above do not fix the problem, open a ticket with the IT Service Desk and include the error code and a screenshot.

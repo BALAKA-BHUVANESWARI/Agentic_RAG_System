@@ -1,0 +1,22 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Administrator Account Recovery Procedure (Admins Only)
+Category: security
+Department: IT
+Access-Level: restricted
+Version: 1
+Last-Reviewed: 2025-02-25
+
+## 1. Scope
+This procedure covers recovery of privileged administrator accounts. It is available to IT administrators only.
+
+## 2. Break-glass accounts
+Two break-glass accounts exist for emergencies. Their credentials are sealed in the security safe and are never stored digitally. Using one requires approval from both the IT Director and the Head of Security.
+
+## 3. Recovering a locked administrator account
+1. The administrator opens a P2 ticket and states the account name.
+2. A second administrator confirms the request in person or by video.
+3. IT Security resets the hardware security key binding.
+4. The administrator signs in and sets a new password of at least 14 characters.
+
+## 4. After recovery
+Review the audit log for the 7 days before the lockout. Record the recovery in the privileged access register.

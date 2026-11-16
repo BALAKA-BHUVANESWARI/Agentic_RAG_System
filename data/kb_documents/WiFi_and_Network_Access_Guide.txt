@@ -1,0 +1,27 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Wi-Fi and Network Access Guide
+Category: network
+Department: IT
+Access-Level: public
+Version: 1
+Last-Reviewed: 2024-12-02
+
+## 1. Networks in the office
+- Acme-Corp: for company laptops. Uses certificate-based sign-in; managed laptops join automatically.
+- Acme-Guest: for visitors. Reception issues a daily access code that expires at midnight.
+
+## 2. Connecting a company laptop
+1. Select Acme-Corp from the Wi-Fi list.
+2. If asked, sign in with your company username and password.
+3. Accept the company certificate prompt.
+
+## 3. Personal devices
+Personal phones may join Acme-Guest only. Personal laptops must not be connected to Acme-Corp.
+
+## 4. Troubleshooting
+- Forget the network and join again.
+- Restart the laptop.
+- If the certificate has expired, open a ticket with the IT Service Desk. Certificates renew automatically every 12 months.
+
+## 5. Wired network
+Docking stations in meeting rooms provide wired access. Plug in the cable and wait about 30 seconds.

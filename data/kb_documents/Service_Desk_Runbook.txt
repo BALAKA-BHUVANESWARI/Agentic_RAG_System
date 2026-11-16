@@ -1,0 +1,22 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: IT Service Desk Runbook (Staff Only)
+Category: service_desk
+Department: IT
+Access-Level: restricted
+Version: 1
+Last-Reviewed: 2025-02-01
+
+## 1. Ticket priorities and response targets
+- P1 (critical, company-wide outage or security incident): first response within 15 minutes, updates every 30 minutes.
+- P2 (major, a team or critical service impacted): first response within 1 hour.
+- P3 (normal, single user impacted): first response within 4 business hours.
+- P4 (request or question): first response within 1 business day.
+
+## 2. Verifying a caller before a password or MFA reset
+Verify at least three items: employee ID, manager name and the last four digits of the registered mobile number. Then call the user back on the number stored in the HR system. Never reset credentials for a caller who fails verification; log the attempt and notify IT Security.
+
+## 3. Escalation
+Escalate P1 tickets to the on-call engineer through the paging tool immediately. Escalate suspected phishing or account compromise to IT Security. Escalate unresolved P2 tickets after 4 hours.
+
+## 4. Closing tickets
+Close a ticket only after the user confirms the fix or after two follow-up attempts over 3 business days with no reply.

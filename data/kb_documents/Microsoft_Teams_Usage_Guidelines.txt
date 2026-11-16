@@ -1,0 +1,31 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Microsoft Teams Usage Guidelines
+Category: collaboration
+Department: IT
+Access-Level: internal
+Version: 1
+Last-Reviewed: 2025-03-22
+
+## 1. Purpose
+Microsoft Teams is the approved tool for internal chat, meetings and file collaboration at Acme Demo Corp.
+
+## 2. Meetings
+- Schedule meetings from the Teams or Outlook calendar so a join link is created automatically.
+- Join with your company account. Anonymous join is allowed only for external guests invited by an employee.
+- Meeting recordings are stored for 120 days and then deleted automatically. Tell participants when you start recording.
+
+## 3. Channels and chat
+- Create a team only for a standing group or project. Use the naming format DEPT-Project-Name.
+- Do not post passwords, customer personal data or restricted documents in chat.
+
+## 4. Guest access
+External guests may be added only after your manager approves the request through a ticket. Guest access expires after 90 days unless renewed.
+
+## 5. File sharing
+Share files from SharePoint or OneDrive links rather than attaching copies. Do not share files marked Confidential outside the company.
+
+## 6. Status and notifications
+Set your status to Do Not Disturb during focus time. Mute channels you do not need.
+
+## 7. Getting help
+For Teams problems on your own device, see the Laptop Troubleshooting Guide or open a ticket with the IT Service Desk.

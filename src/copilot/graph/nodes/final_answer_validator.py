@@ -1,0 +1,89 @@
+"""Node 8: final grounding check. Revise at most MAX_VALIDATION_REVISIONS times, else abstain."""
+from __future__ import annotations
+
+from copilot.generation.answer import make_abstention
+from copilot.generation.citations import EXTERNAL_WARNING
+from copilot.generation.evidence import format_evidence, neutralize_delimiters
+from copilot.generation.models import EvidenceItem, GeneratedAnswer
+from copilot.graph.deps import GraphDeps
+from copilot.graph.nodes.common import event, traced, usage_update
+from copilot.graph.schemas import GroundingCheck
+from copilot.graph.state import CopilotState
+from copilot.llm.client import LLMUnavailableError, StructuredOutputError
+from copilot.llm.prompts import VALIDATOR_SYSTEM_PROMPT
+
+
+def make_final_answer_validator(deps: GraphDeps):
+    """Build the ``final_answer_validator`` node."""
+    s = deps.settings
+
+    @traced("final_answer_validator")
+    def final_answer_validator(state: CopilotState) -> dict:
+        raw = state.get("answer")
+        ans = GeneratedAnswer(**raw) if raw else make_abstention("internal_error", model=s.groq_model)
+        if ans.abstained:
+            return {
+                "answer": ans.model_dump(), "needs_revision": False,
+                "validation": {"passed": True, "skipped": "abstention contains no claims"},
+                "_event": event("abstention: nothing to validate", "pass"),
+            }
+
+        items = [EvidenceItem(**e) for e in state.get("evidence", [])]
+        grade = state.get("private_grade") or {}
+        conflict_expected = bool(grade.get("effective_sufficient") and grade.get("contradiction_detected"))
+        problems: list[str] = []
+        if ans.used_external and EXTERNAL_WARNING not in ans.rendered:
+            problems.append("external information is not labelled with the required warning")
+
+        prompt = (
+            f"conflict_expected: {str(conflict_expected).lower()}\n\n"
+            f"Evidence:\n{format_evidence(items, s.evidence_max_chars)}\n\n"
+            f"DRAFT ANSWER:\n<answer>\n{neutralize_delimiters(ans.answer)}\n</answer>"
+        )
+        try:
+            check, usage = deps.llm.structured(
+                [{"role": "system", "content": VALIDATOR_SYSTEM_PROMPT}, {"role": "user", "content": prompt}], GroundingCheck
+            )
+        except (LLMUnavailableError, StructuredOutputError) as exc:
+            # Fail closed: an unverified answer is not delivered.
+            refusal = make_abstention("validation_failed", error=str(exc), model=s.groq_model, usage=ans.usage)
+            return {
+                "answer": refusal.model_dump(), "needs_revision": False,
+                "validation": {"passed": False, "error": str(exc), "rejected_answer": ans.rendered},
+                "_event": event(f"validator unavailable: {type(exc).__name__}", "abstain (fail closed)", error=str(exc)),
+            }
+
+        if not check.grounded or check.unsupported_claims:
+            problems.append("unsupported claims: " + "; ".join(check.unsupported_claims or ["unspecified"]))
+        if conflict_expected and not check.conflicts_communicated:
+            problems.append("the sources conflict but the answer does not clearly state each version with its citation")
+        if ans.used_external and not check.external_clearly_separated:
+            problems.append("public vendor information is not clearly separated from company guidance")
+
+        details = {"grounded": check.grounded, "unsupported_claims": check.unsupported_claims,
+                   "conflicts_communicated": check.conflicts_communicated, "conflict_expected": conflict_expected,
+                   "external_clearly_separated": check.external_clearly_separated, "reasoning": check.reasoning,
+                   "problems": problems}
+        if not problems:
+            return {
+                "needs_revision": False, "validator_feedback": "", "llm_usage": usage_update(usage),
+                "validation": {"passed": True, **details},
+                "_event": event("answer is grounded", "pass", **details),
+            }
+
+        revisions = state.get("revision_count", 0)
+        feedback = " | ".join(problems)
+        if revisions < s.max_validation_revisions:
+            return {
+                "needs_revision": True, "revision_count": revisions + 1, "validator_feedback": feedback,
+                "llm_usage": usage_update(usage), "validation": {"passed": False, "revising": True, **details},
+                "_event": event(f"validation failed ({len(problems)} problem(s))", f"revise answer once ({revisions + 1}/{s.max_validation_revisions})", **details),
+            }
+        refusal = make_abstention("validation_failed", model=s.groq_model, usage=ans.usage)
+        return {
+            "answer": refusal.model_dump(), "needs_revision": False, "llm_usage": usage_update(usage),
+            "validation": {"passed": False, "revising": False, "rejected_answer": ans.rendered, **details},
+            "_event": event("validation failed after revision limit", "abstain", **details),
+        }
+
+    return final_answer_validator

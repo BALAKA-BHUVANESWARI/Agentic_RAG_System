@@ -1,0 +1,27 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Internal Information Security Policy
+Category: security
+Department: Security
+Access-Level: internal
+Version: 2
+Last-Reviewed: 2025-01-10
+
+## 1. Data classification
+Company data is classified as Public, Internal, Confidential or Restricted. Handle data according to the highest classification it contains.
+
+## 2. Devices
+- Lock your screen whenever you leave your laptop. Screens lock automatically after 10 minutes.
+- USB storage devices are blocked on company laptops.
+- Personal cloud storage services must not be used for company data.
+
+## 3. Lost or stolen devices
+Report a lost or stolen laptop or phone to the IT Service Desk within 1 hour of noticing. IT will lock and wipe the device remotely.
+
+## 4. Phishing
+Do not click links or open attachments in unexpected messages. Use the Report Phishing button in Outlook to report suspicious email. If you clicked a link or entered your password, contact the IT Service Desk immediately.
+
+## 5. Working in public
+Do not work on Confidential data in public places where others can see your screen. Use a privacy screen where available.
+
+## 6. Incident reporting
+All suspected security incidents must be reported to IT Security as soon as possible, no later than 24 hours after discovery.

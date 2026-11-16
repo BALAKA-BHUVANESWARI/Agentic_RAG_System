@@ -1,0 +1,29 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Software Installation Procedure
+Category: software
+Department: IT
+Access-Level: internal
+Version: 1
+Last-Reviewed: 2024-11-05
+
+## 1. Scope
+This procedure applies to all company-managed Windows and macOS laptops.
+
+## 2. Installing approved software
+1. Open Acme Software Center from the Start menu or Applications folder.
+2. Search for the application and select Install.
+3. Wait for the status to show "Installed". Some installs require a restart.
+
+Approved software includes the Microsoft 365 apps, Microsoft Teams, Acme SecureLink VPN, Acme Authenticator, Zoom Viewer, 7-Zip and Visual Studio Code.
+
+## 3. Requesting software that is not in the catalog
+1. Open a ticket in the IT Service Desk portal under "Software Request".
+2. State the business reason, the product name and version, and the licence type.
+3. Your manager and IT Security must both approve. Reviews take up to 3 business days.
+4. IT installs the software remotely once approved.
+
+## 4. Local administrator rights
+Employees do not have local administrator rights. Do not try to bypass this restriction.
+
+## 5. Prohibited software
+Peer-to-peer file sharing clients, cryptocurrency miners, unlicensed software and remote-access tools not approved by IT are prohibited.

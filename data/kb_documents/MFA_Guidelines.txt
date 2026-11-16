@@ -1,0 +1,29 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Multi-Factor Authentication (MFA) Guidelines
+Category: mfa
+Department: Security
+Access-Level: internal
+Version: 2
+Last-Reviewed: 2025-03-03
+
+## 1. Requirement
+MFA is mandatory for all employees on email, VPN, the intranet and any cloud application using company single sign-on.
+
+## 2. Enrolling
+1. Install the Acme Authenticator app on your phone from the official app store.
+2. Go to mfa.acme-demo.example and sign in with your company credentials.
+3. Choose "Add device" and scan the QR code with the app.
+4. Enter the six-digit code to finish enrolment.
+5. Download your 10 one-time backup codes and store them in Acme Vault.
+
+## 3. Approving sign-in prompts
+Sign-ins use number matching: enter the number shown on the sign-in screen into the app. Only approve prompts that you started yourself.
+
+## 4. Unexpected prompts
+If you receive an MFA prompt you did not start, tap Deny and report it to IT Security through the Report Phishing button or the Service Desk within 1 hour. Then change your password.
+
+## 5. Lost or replaced phone
+Contact the IT Service Desk. Your identity will be verified before MFA is reset. You can use a backup code to sign in while you wait. Enrol the new phone as soon as access is restored.
+
+## 6. Hardware security keys
+Administrators and privileged accounts must use a hardware security key in addition to the authenticator app.

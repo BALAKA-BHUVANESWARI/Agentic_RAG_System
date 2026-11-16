@@ -1,0 +1,33 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Laptop Troubleshooting Guide
+Category: laptop
+Department: IT
+Access-Level: public
+Version: 2
+Last-Reviewed: 2025-04-18
+
+## 1. Before you contact IT
+Save your work, then restart the laptop. A full restart (not sleep) fixes many problems. Restart at least once a week.
+
+## 2. Laptop is slow
+1. Close applications you are not using.
+2. Open Task Manager (Ctrl+Shift+Esc) and check which program uses the most memory or CPU.
+3. Make sure at least 10 percent of disk space is free.
+4. Install pending updates from Acme Software Center and restart.
+
+## 3. Laptop will not turn on
+1. Connect the charger and wait 15 minutes.
+2. Hold the power button for 15 seconds, release, then press it once.
+3. If it still does not start, contact the IT Service Desk. A loaner laptop is normally available within 1 business day.
+
+## 4. Wi-Fi keeps disconnecting
+Turn Wi-Fi off and on, forget and rejoin the network, then restart. See the Wi-Fi and Network Access Guide for details.
+
+## 5. Blue screen or repeated crashes
+Note the stop code shown on screen, restart, and open a ticket with that code. Do not reinstall Windows yourself.
+
+## 6. Microsoft Teams problems on your laptop
+If Teams is slow or will not start, quit it from the system tray, clear the Teams cache using the "Reset Teams" shortcut in Acme Software Center, and sign in again.
+
+## 7. Battery
+Replace the battery if it lasts under 2 hours on a full charge. Request a replacement through the Service Desk portal.
