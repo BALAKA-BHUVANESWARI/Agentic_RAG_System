@@ -155,3 +155,14 @@ def test_retriever_passes_filters_and_top_k(settings, embedder, store, index):
         "vpn", "employee", top_k=2, filters=RetrievalFilters(category="general")
     )
     assert index.last_filter == {"$and": [{"access_level": {"$in": ["public", "internal"]}}, {"category": {"$eq": "general"}}]}
+
+
+def test_delete_document_accepts_sdk_list_items(store, index):
+    """Current Pinecone SDKs list() yields pages of ListItem objects (with .id), not plain strings."""
+    from types import SimpleNamespace
+
+    store.upsert([make_chunk(0, version=1), make_chunk(0, version=2)], [[1.0]] * 2)
+    original = index.list
+    index.list = lambda prefix="", namespace=None: ([SimpleNamespace(id=i) for i in page] for page in original(prefix=prefix, namespace=namespace))
+    assert store.delete_document("d1", keep_version=2) == 1
+    assert index.ids() == ["d1:v2:0"]

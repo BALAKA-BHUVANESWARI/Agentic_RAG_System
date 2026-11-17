@@ -41,6 +41,7 @@ class AgenticResponse(BaseModel):
     external_grade: dict | None = None
     external_blocked_reason: str | None = None
     validation: dict | None = None
+    evidence: list[dict] = Field(default_factory=list)  # evidence items shown to the generator (used by the evaluation judge; never returned by /chat)
     llm_usage: LLMUsage = Field(default_factory=LLMUsage)
     tavily_calls: int = 0
     latency_ms: float
@@ -107,6 +108,6 @@ class AgenticRAG:
             retry_count=final.get("retry_count", 0), external_search_triggered=bool(final.get("external_triggered")),
             external_query=final.get("external_query"), external_results=final.get("external_results", []),
             external_grade=final.get("external_grade"), external_blocked_reason=final.get("external_blocked_reason"),
-            validation=final.get("validation"), llm_usage=LLMUsage(**(final.get("llm_usage") or {})),
+            validation=final.get("validation"), evidence=final.get("evidence", []), llm_usage=LLMUsage(**(final.get("llm_usage") or {})),
             tavily_calls=final.get("tavily_calls", 0), latency_ms=latency_ms, error=final.get("fatal_error"),
         )

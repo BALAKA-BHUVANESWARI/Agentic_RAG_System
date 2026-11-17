@@ -57,6 +57,9 @@ def retry_call(
             if hint is not None:
                 delay = max(delay, hint + 0.25)
             delay = min(delay, max_delay_s)
-            log.warning("%s failed (%s); retrying in %.2fs", operation, type(exc).__name__, delay)
+            # The service's own explanation (which limit, requested vs allowed) is what tells a
+            # momentary rate limit from a request that can never fit; keep it short and secret-free.
+            detail = " ".join(str(exc).split())[:300]
+            log.warning("%s failed (%s); retrying in %.2fs: %s", operation, type(exc).__name__, delay, detail)
             time.sleep(delay)
             attempt += 1

@@ -68,14 +68,20 @@ class TavilySearchClient:
         return list((response or {}).get("results", []))
 
     def search(self, query: str) -> list[ExternalResult]:
-        """Search official domains first; broaden to the general web only if too few results.
+        """Search official domains first; broaden to the general web unless two OFFICIAL results were found.
 
-        At most two Tavily calls per search. Invalid URLs and duplicates are dropped;
-        official sources are ranked first.
+        Only genuinely official results count toward that quota: a community thread hosted on an official
+        domain (e.g. learn.microsoft.com/answers/...) is user-written content and must not stop the broader
+        search. At most two Tavily calls per search. Invalid URLs and duplicates are dropped; official
+        sources are ranked first.
         """
         s = self._settings
-        raw = self._call(query, s.preferred_external_domains or None) if s.preferred_external_domains else []
-        if len(raw) < 2:
+        raw = self._call(query, s.preferred_external_domains) if s.preferred_external_domains else []
+        official = sum(
+            1 for item in raw
+            if is_preferred_domain(str(item.get("url", "")), s.preferred_external_domains, s.user_generated_url_markers)
+        )
+        if official < 2:
             raw += self._call(query, None)
 
         results: dict[str, ExternalResult] = {}

@@ -173,8 +173,39 @@ class HealthResponse(BaseModel):
 
 # ---- evaluation -------------------------------------------------------------------------
 class EvaluationRunRequest(BaseModel):
-    """Parameters for an evaluation run."""
+    """Parameters for an evaluation run (the run starts in the background)."""
 
     mode: Literal["agentic", "baseline", "both"] = "both"
-    limit: int | None = Field(default=None, ge=1, description="Run only the first N cases.")
+    limit: int | None = Field(default=None, ge=1, description="Run only the first N cases (after the other filters).")
+    per_category: int | None = Field(default=None, ge=1, description="Run only the first N cases of each category.")
     categories: list[str] | None = None
+    use_judge: bool = Field(default=True, description="Also run the LLM judge (faithfulness / relevance). Costs extra tokens.")
+    resume_run_id: str | None = Field(default=None, max_length=64, description="Resume this earlier run (its saved options are reused).")
+
+    @field_validator("categories")
+    @classmethod
+    def _known_categories(cls, v: list[str] | None) -> list[str] | None:
+        from copilot.evaluation.schemas import CATEGORIES
+
+        bad = sorted(set(v or []) - set(CATEGORIES))
+        if bad:
+            raise ValueError(f"unknown categories {bad}; valid: {CATEGORIES}")
+        return v
+
+
+class EvaluationRunInfo(BaseModel):
+    """Status of one evaluation run."""
+
+    run_id: str
+    status: str  # running | cancelling | completed | cancelled | stopped | failed | interrupted
+    mode: str | None = None
+    dataset_path: str | None = None
+    num_cases: int | None = None
+    use_judge: bool | None = None
+    done: int = 0
+    total: int = 0
+    message: str = ""
+    started_at: str | None = None
+    finished_at: str | None = None
+    error: str | None = None
+    metrics: dict[str, Any] | None = None

@@ -119,6 +119,22 @@ class Settings(BaseSettings):
     api_base_url: str = "http://127.0.0.1:8000"  # where the Streamlit UI finds the API
     ui_request_timeout_s: float = Field(default=180.0, gt=0)
 
+    # ---- Evaluation -----------------------------------------------------
+    eval_dataset_path: Path = Path("data/eval/dataset.json")
+    eval_ks: list[int] = Field(default_factory=lambda: [1, 3, 5])
+    eval_retrieval_pool: int = Field(default=20, ge=5, le=50, description="Chunks retrieved to estimate how many relevant chunks exist.")
+    eval_answer_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="Share of expected answer points an answer must contain to count as correct.")
+    eval_faithfulness_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    eval_case_delay_s: float = Field(default=0.0, ge=0.0, description="Pause between cases (helps with provider rate limits).")
+    eval_max_consecutive_errors: int = Field(
+        default=3, ge=1,
+        description="Stop an evaluation run after this many infrastructure errors in a row (a quota or outage would only waste time); resume later.",
+    )
+    # Approximate list prices in USD (edit if your plan differs); used only for the cost estimate.
+    price_llm_input_per_mtok: float = Field(default=0.15, ge=0.0)
+    price_llm_output_per_mtok: float = Field(default=0.60, ge=0.0)
+    price_tavily_per_search: float = Field(default=0.008, ge=0.0)
+
     # ---- Paths ----------------------------------------------------------
     sqlite_path: Path = Path("data/sqlite/app.db")
     kb_documents_dir: Path = Path("data/kb_documents")
@@ -135,7 +151,7 @@ class Settings(BaseSettings):
     )
 
     # ---- Validators -----------------------------------------------------
-    @field_validator("sqlite_path", "kb_documents_dir", "eval_dir", "uploads_dir")
+    @field_validator("sqlite_path", "kb_documents_dir", "eval_dir", "uploads_dir", "eval_dataset_path")
     @classmethod
     def _resolve_relative_to_project(cls, value: Path) -> Path:
         """Anchor relative paths at the project root so cwd never matters."""

@@ -158,7 +158,8 @@ class PineconeStore:
         keep_prefix = f"{document_id}:v{keep_version}:" if keep_version is not None else None
         ids: list[str] = []
         for page in self.index.list(prefix=f"{document_id}:", namespace=ns):
-            ids.extend(page)
+            # Older SDKs yield pages of plain id strings; current SDKs yield pages of ListItem objects with an ``id``.
+            ids.extend(i for i in ((x if isinstance(x, str) else getattr(x, "id", None)) for x in page) if i)
         if keep_prefix:
             ids = [i for i in ids if not i.startswith(keep_prefix)]
         for start in range(0, len(ids), 500):

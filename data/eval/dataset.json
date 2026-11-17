@@ -1,0 +1,1430 @@
+{
+  "version": 1,
+  "description": "Labelled evaluation set for the IT Support Copilot. Questions are written against the SYNTHETIC DEMO knowledge base in data/kb_documents; none of this reflects real company policy.",
+  "cases": [
+    {
+      "id": "D01",
+      "category": "direct_kb",
+      "question": "How do I connect to the company VPN from home?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "open the SecureLink client",
+          "keywords": [
+            "securelink"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "server address",
+          "keywords": [
+            "vpn acme demo example"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "approve MFA",
+          "keywords": [
+            "mfa"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "wait for connected",
+          "keywords": [
+            "connected"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D02",
+      "category": "direct_kb",
+      "question": "What does VPN error SL-401 mean and what happens after repeated failures?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "authentication failed",
+          "keywords": [
+            "authentication failed"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "5 failed attempts",
+          "keywords": [
+            "5"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "locks 15 minutes",
+          "keywords": [
+            "15 minutes"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D03",
+      "category": "direct_kb",
+      "question": "What should I do about VPN error SL-512?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "TCP fallback",
+          "keywords": [
+            "tcp fallback"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "phone hotspot",
+          "keywords": [
+            "hotspot"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D04",
+      "category": "direct_kb",
+      "question": "Where should I store my passwords?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "Acme Vault",
+          "keywords": [
+            "acme vault"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D05",
+      "category": "direct_kb",
+      "question": "How do I enrol in multi-factor authentication?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "Acme Authenticator",
+          "keywords": [
+            "acme authenticator"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "QR code",
+          "keywords": [
+            "qr code"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "backup codes",
+          "keywords": [
+            "backup codes"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D06",
+      "category": "direct_kb",
+      "question": "What should I do if I get an MFA prompt I did not start?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "tap deny",
+          "keywords": [
+            "deny"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "report within 1 hour",
+          "keywords": [
+            "1 hour"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "change password",
+          "keywords": [
+            "change",
+            "password"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D07",
+      "category": "direct_kb",
+      "question": "How do I install approved software on my laptop?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "Software Center",
+          "keywords": [
+            "software center"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "install",
+          "keywords": [
+            "install"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D08",
+      "category": "direct_kb",
+      "question": "How do I request software that is not in the catalog?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "open a ticket",
+          "keywords": [
+            "ticket"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "manager and IT Security approve",
+          "keywords": [
+            "it security"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "3 business days",
+          "keywords": [
+            "3 business days"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D09",
+      "category": "direct_kb",
+      "question": "What should I do if my laptop will not turn on?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "charge 15 minutes",
+          "keywords": [
+            "15 minutes"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "hold power 15 seconds",
+          "keywords": [
+            "15 seconds"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "contact Service Desk",
+          "keywords": [
+            "service desk"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D10",
+      "category": "direct_kb",
+      "question": "Which Wi-Fi network should visitors use?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "WiFi_and_Network_Access_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "Acme-Guest",
+          "keywords": [
+            "acme guest"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "daily access code",
+          "keywords": [
+            "access code"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "WiFi_and_Network_Access_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "D11",
+      "category": "direct_kb",
+      "question": "What are the response time targets for P1 and P2 tickets?",
+      "role": "admin",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Service_Desk_Runbook.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "P1 15 minutes",
+          "keywords": [
+            "15 minutes"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "P2 1 hour",
+          "keywords": [
+            "1 hour"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Service_Desk_Runbook.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "admin role: restricted document"
+    },
+    {
+      "id": "D12",
+      "category": "direct_kb",
+      "question": "How is a locked administrator account recovered?",
+      "role": "admin",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Admin_Account_Recovery_Procedure.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "P2 ticket",
+          "keywords": [
+            "p2 ticket"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "second administrator",
+          "keywords": [
+            "second administrator"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "14 characters",
+          "keywords": [
+            "14 characters"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Admin_Account_Recovery_Procedure.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "admin role: restricted document"
+    },
+    {
+      "id": "P01",
+      "category": "paraphrased",
+      "question": "I'm working remotely and can't reach the intranet. How do I get on the VPN?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "SecureLink",
+          "keywords": [
+            "securelink"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "connect",
+          "keywords": [
+            "connect"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "P02",
+      "category": "paraphrased",
+      "question": "My VPN session dropped after half a day. Is that normal?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "12 hours",
+          "keywords": [
+            "12 hours"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "P03",
+      "category": "paraphrased",
+      "question": "Does the VPN send all of my traffic through the company network?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "all traffic",
+          "keywords": [
+            "all traffic"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "P04",
+      "category": "paraphrased",
+      "question": "If someone steals my work laptop, how quickly must I tell IT?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "within 1 hour",
+          "keywords": [
+            "1 hour"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "P05",
+      "category": "paraphrased",
+      "question": "Are USB flash drives allowed on company computers?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "blocked",
+          "keywords": [
+            "blocked"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "P06",
+      "category": "paraphrased",
+      "question": "How long are Teams meeting recordings kept?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "120 days",
+          "keywords": [
+            "120 days"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "P07",
+      "category": "paraphrased",
+      "question": "How long can an outside guest stay in our Teams?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "90 days",
+          "keywords": [
+            "90 days"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "P08",
+      "category": "paraphrased",
+      "question": "Can I connect my personal laptop to the office Wi-Fi?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "WiFi_and_Network_Access_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "not allowed on Acme-Corp",
+          "keywords": [
+            "not",
+            "acme corp"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "WiFi_and_Network_Access_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "R01",
+      "category": "needs_rewriting",
+      "question": "My computer is totally dead and the screen stays black. What now?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "charger 15 minutes",
+          "keywords": [
+            "15 minutes"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "service desk",
+          "keywords": [
+            "service desk"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "R02",
+      "category": "needs_rewriting",
+      "question": "Somebody keeps sending me sign-in approval requests I never asked for.",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "deny",
+          "keywords": [
+            "deny"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "report",
+          "keywords": [
+            "report"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "R03",
+      "category": "needs_rewriting",
+      "question": "I need Photoshop for a client project. How do I get it?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "open a ticket",
+          "keywords": [
+            "ticket"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "manager and IT Security approve",
+          "keywords": [
+            "it security"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "R04",
+      "category": "needs_rewriting",
+      "question": "I lost my phone that has the authenticator app on it. How do I get back in?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "service desk",
+          "keywords": [
+            "service desk"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "backup code",
+          "keywords": [
+            "backup code"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "R05",
+      "category": "needs_rewriting",
+      "question": "Teams is crawling and will not open properly on my work machine.",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "Reset Teams",
+          "keywords": [
+            "reset teams"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "cache",
+          "keywords": [
+            "cache"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "R06",
+      "category": "needs_rewriting",
+      "question": "I clicked a weird link in an email and typed my password. What should I do?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "contact Service Desk",
+          "keywords": [
+            "service desk"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "immediately",
+          "keywords": [
+            "immediately"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "I01",
+      "category": "insufficient_private",
+      "question": "Which printer queue should I use on the third floor?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "company-specific and undocumented: should NOT trigger a public web search"
+    },
+    {
+      "id": "I02",
+      "category": "insufficient_private",
+      "question": "What is the process to request a second monitor for my desk?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "company-specific and undocumented: should NOT trigger a public web search"
+    },
+    {
+      "id": "I03",
+      "category": "insufficient_private",
+      "question": "What is our policy on using personal phones for work email?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "company-specific and undocumented: should NOT trigger a public web search"
+    },
+    {
+      "id": "I04",
+      "category": "insufficient_private",
+      "question": "Who is the IT contact for the marketing department?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "company-specific and undocumented: should NOT trigger a public web search"
+    },
+    {
+      "id": "I05",
+      "category": "insufficient_private",
+      "question": "Which shared drive holds the finance templates?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "company-specific and undocumented: should NOT trigger a public web search"
+    },
+    {
+      "id": "I06",
+      "category": "insufficient_private",
+      "question": "How do I get approval for a loaner laptop for overseas travel?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "company-specific and undocumented: should NOT trigger a public web search"
+    },
+    {
+      "id": "E01",
+      "category": "current_external",
+      "question": "What is the latest Microsoft Teams outage guidance?",
+      "role": "employee",
+      "expected_route": "private_then_external",
+      "expected_documents": [],
+      "expected_answer_points": [
+        {
+          "text": "service health",
+          "keywords": [
+            "service health"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "Scenario B"
+    },
+    {
+      "id": "E02",
+      "category": "current_external",
+      "question": "Is there a Microsoft 365 outage happening right now?",
+      "role": "employee",
+      "expected_route": "private_then_external",
+      "expected_documents": [],
+      "expected_answer_points": [
+        {
+          "text": "service health",
+          "keywords": [
+            "service health"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "E03",
+      "category": "current_external",
+      "question": "Where can admins check the current status of Microsoft 365 services?",
+      "role": "employee",
+      "expected_route": "private_then_external",
+      "expected_documents": [],
+      "expected_answer_points": [
+        {
+          "text": "service health",
+          "keywords": [
+            "service health"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "E04",
+      "category": "current_external",
+      "question": "What are the current Microsoft Teams system requirements for Windows?",
+      "role": "employee",
+      "expected_route": "private_then_external",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "live web content varies: judged by route and citation, not keywords"
+    },
+    {
+      "id": "E05",
+      "category": "current_external",
+      "question": "What are our company rules for recording Teams meetings, and is Microsoft reporting any Teams outage today?",
+      "role": "employee",
+      "expected_route": "private_plus_external",
+      "expected_documents": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "120 days",
+          "keywords": [
+            "120 days"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "service health",
+          "keywords": [
+            "service health"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "Scenario C"
+    },
+    {
+      "id": "E06",
+      "category": "current_external",
+      "question": "How long do we keep Teams guest accounts, and is there a current Microsoft advisory about Teams guest access?",
+      "role": "employee",
+      "expected_route": "private_plus_external",
+      "expected_documents": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "90 days",
+          "keywords": [
+            "90 days"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "Scenario C; external part varies"
+    },
+    {
+      "id": "C01",
+      "category": "conflicting",
+      "question": "What is the minimum password length?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "current: 14",
+          "keywords": [
+            "14"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "older edition: 8",
+          "keywords": [
+            "8"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": true,
+      "notes": ""
+    },
+    {
+      "id": "C02",
+      "category": "conflicting",
+      "question": "How many failed sign-in attempts lock my account, and for how long?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "current: 5 attempts, 15 minutes",
+          "keywords": [
+            "5",
+            "15 minutes"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "older: 3 attempts, 30 minutes",
+          "keywords": [
+            "3",
+            "30 minutes"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": true,
+      "notes": ""
+    },
+    {
+      "id": "C03",
+      "category": "conflicting",
+      "question": "Do I have to change my password every 90 days?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "current: no fixed expiry",
+          "keywords": [
+            "not expire"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "older: 90 days",
+          "keywords": [
+            "90 days"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": true,
+      "notes": ""
+    },
+    {
+      "id": "C04",
+      "category": "conflicting",
+      "question": "How many of my previous passwords am I not allowed to reuse?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "current: 12",
+          "keywords": [
+            "12"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "older: 5",
+          "keywords": [
+            "5"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": true,
+      "notes": ""
+    },
+    {
+      "id": "U01",
+      "category": "unanswerable",
+      "question": "What is the IP address of the Singapore VPN gateway?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "U02",
+      "category": "unanswerable",
+      "question": "What is the password of the CEO's laptop?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "must not be answered and must not trigger web search"
+    },
+    {
+      "id": "U03",
+      "category": "unanswerable",
+      "question": "How many employees connected to the VPN yesterday?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "U04",
+      "category": "unanswerable",
+      "question": "What are the service desk escalation steps for P1 tickets?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [
+        "paging tool",
+        "on call engineer"
+      ],
+      "expects_conflict_notice": false,
+      "notes": "access control: employee must not receive the restricted runbook"
+    },
+    {
+      "id": "U05",
+      "category": "unanswerable",
+      "question": "How do I recover a locked administrator account?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [
+        "break glass",
+        "security safe",
+        "second administrator"
+      ],
+      "expects_conflict_notice": false,
+      "notes": "access control: restricted document"
+    },
+    {
+      "id": "U06",
+      "category": "unanswerable",
+      "question": "Who approved my last software request?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "needs ticket data that the knowledge base does not hold"
+    },
+    {
+      "id": "O01",
+      "category": "out_of_scope",
+      "question": "What's a good recipe for lasagna?",
+      "role": "employee",
+      "expected_route": "out_of_scope",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "O02",
+      "category": "out_of_scope",
+      "question": "Who won the last cricket world cup?",
+      "role": "employee",
+      "expected_route": "out_of_scope",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "O03",
+      "category": "out_of_scope",
+      "question": "Write a poem about my manager.",
+      "role": "employee",
+      "expected_route": "out_of_scope",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "O04",
+      "category": "out_of_scope",
+      "question": "What is the weather in Mumbai today?",
+      "role": "employee",
+      "expected_route": "out_of_scope",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    }
+  ]
+}

@@ -28,7 +28,7 @@ class Services:
     audit: AuditLogger
     feedback: FeedbackStore
     store: Any  # needs .health_check()
-    evaluation_runner: Any | None = None  # set in Phase 7: .run(mode, limit, categories) -> dict
+    evaluation_runner: Any | None = None  # an EvaluationService (Phase 7b): start / status / list_runs / summary / cancel
 
 
 def build_services(settings: Settings) -> Services:
@@ -52,8 +52,11 @@ def build_services(settings: Settings) -> Services:
         settings=settings, llm=llm, retriever=Retriever(settings, embedder=embedder, store=store),
         search=TavilySearchClient(settings), generator=AnswerGenerator(settings, llm=llm), audit=audit,
     )
+    from copilot.evaluation.factory import build_evaluation_service
+
+    agent = AgenticRAG(settings, deps)
     return Services(
-        settings=settings, agent=AgenticRAG(settings, deps),
+        settings=settings, agent=agent, evaluation_runner=build_evaluation_service(settings, deps, agent),
         pipeline=IngestionPipeline(settings, embedder=embedder, store=store, repo=repo),
         repo=repo, audit=audit, feedback=FeedbackStore(settings.sqlite_path, settings.max_comment_chars), store=store,
     )

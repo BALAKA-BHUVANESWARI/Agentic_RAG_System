@@ -107,6 +107,20 @@ def test_no_second_call_when_official_results_suffice(make_settings):
     assert len(client.search("q words here")) == 2 and client.call_count == 1
 
 
+def test_community_threads_on_an_official_domain_do_not_stop_the_broader_search(make_settings):
+    """Regression: Q&A threads on learn.microsoft.com filled the official quota, so no official page was ever searched for."""
+    qa = [_res(f"https://learn.microsoft.com/en-us/answers/questions/{n}/is-there-a-teams-outage", title=f"QA{n}", score=0.9) for n in (1, 2, 3)]
+    sdk = _FakeTavily(
+        {"results": qa},
+        {"results": [_res("https://learn.microsoft.com/en-us/microsoftteams/known-issues", title="Official docs", score=0.4)]},
+    )
+    client = TavilySearchClient(make_settings(), client=sdk)
+    out = client.search("teams outage guidance")
+    assert client.call_count == 2 and "include_domains" not in sdk.calls[1]
+    assert out[0].title == "Official docs" and out[0].preferred           # the official page outranks the higher-scored threads
+    assert all(not r.preferred for r in out[1:]) and len(out) == 4
+
+
 def test_invalid_urls_empty_content_are_dropped_and_content_truncated(make_settings):
     s = make_settings(external_content_max_chars=200)
     sdk = _FakeTavily(
