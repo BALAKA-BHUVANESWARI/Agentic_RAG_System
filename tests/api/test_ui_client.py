@@ -43,7 +43,7 @@ def test_upload_failure_returns_body_but_success_and_admin_flow_work(api):
     assert ok["status"] == "indexed" and admin.reindex_document(ok["document_id"])["status"] == "indexed"
     assert admin.delete_document(ok["document_id"])["deleted"] is True
     with pytest.raises(ApiError) as exc:
-        admin.run_evaluation()
+        admin.start_evaluation()
     assert exc.value.status_code == 501
 
 

@@ -92,6 +92,27 @@ class CopilotClient:
         """GET /audit/{request_id}."""
         return self._request("GET", f"/audit/{request_id}")
 
-    def run_evaluation(self, mode: str = "both", limit: int | None = None) -> dict:
-        """POST /evaluation/run (can take minutes)."""
-        return self._request("POST", "/evaluation/run", json={"mode": mode, "limit": limit}, timeout=3600)
+    # ---- evaluation (admin only; runs execute in the background on the server) --------------
+    def start_evaluation(
+        self, *, mode: str = "both", limit: int | None = None, per_category: int | None = None,
+        categories: list[str] | None = None, use_judge: bool = True, resume_run_id: str | None = None,
+    ) -> dict:
+        """POST /evaluation/run. Returns at once with the run's status; poll :meth:`evaluation_status`."""
+        body = {"mode": mode, "limit": limit, "per_category": per_category, "categories": categories, "use_judge": use_judge, "resume_run_id": resume_run_id}
+        return self._request("POST", "/evaluation/run", json=body)
+
+    def list_evaluation_runs(self, limit: int = 20) -> list[dict]:
+        """GET /evaluation/runs (newest first)."""
+        return self._request("GET", "/evaluation/runs", params={"limit": limit})
+
+    def evaluation_status(self, run_id: str) -> dict:
+        """GET /evaluation/runs/{id}."""
+        return self._request("GET", f"/evaluation/runs/{run_id}")
+
+    def evaluation_summary(self, run_id: str) -> dict:
+        """GET /evaluation/runs/{id}/summary (404 until the run has written one)."""
+        return self._request("GET", f"/evaluation/runs/{run_id}/summary")
+
+    def cancel_evaluation(self, run_id: str) -> dict:
+        """POST /evaluation/runs/{id}/cancel (the run stops after the case in flight)."""
+        return self._request("POST", f"/evaluation/runs/{run_id}/cancel")

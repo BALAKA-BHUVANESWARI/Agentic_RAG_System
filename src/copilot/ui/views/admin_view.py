@@ -1,4 +1,4 @@
-"""Admin page: document management, audit lookup and evaluation."""
+"""Admin page: document management, audit lookup and the evaluation dashboard."""
 from __future__ import annotations
 
 import streamlit as st
@@ -6,6 +6,7 @@ import streamlit as st
 from copilot.config import Settings
 from copilot.ui.api_client import ApiError, CopilotClient
 from copilot.ui.formatting import documents_table, format_ms
+from copilot.ui.views.evaluation_view import render_evaluation
 
 _ACCESS = ["internal", "public", "restricted"]
 
@@ -80,18 +81,6 @@ def _audit_tab(client: CopilotClient) -> None:
         st.json(rec, expanded=False)
 
 
-def _evaluation_tab(client: CopilotClient) -> None:
-    st.subheader("Evaluation")
-    st.caption("Runs the labelled test set through the baseline RAG and the agentic workflow.")
-    mode = st.selectbox("Mode", ["both", "agentic", "baseline"], key="eval_mode")
-    if st.button("Run evaluation", key="eval_go"):
-        with st.spinner("Running evaluation (this can take several minutes)…"):
-            try:
-                st.json(client.run_evaluation(mode=mode))
-            except ApiError as exc:
-                (st.info if exc.status_code == 501 else st.error)(exc.detail)
-
-
 def render_admin(client: CopilotClient, settings: Settings) -> None:
     """Draw the admin page."""
     st.header("Administration")
@@ -101,4 +90,4 @@ def render_admin(client: CopilotClient, settings: Settings) -> None:
     with audit_tab:
         _audit_tab(client)
     with eval_tab:
-        _evaluation_tab(client)
+        render_evaluation(client, settings)

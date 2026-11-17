@@ -118,6 +118,7 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000, ge=1, le=65535)
     api_base_url: str = "http://127.0.0.1:8000"  # where the Streamlit UI finds the API
     ui_request_timeout_s: float = Field(default=180.0, gt=0)
+    ui_eval_refresh_s: float = Field(default=5.0, ge=1.0, description="Seconds between automatic progress refreshes of a running evaluation in the dashboard.")
 
     # ---- Evaluation -----------------------------------------------------
     eval_dataset_path: Path = Path("data/eval/dataset.json")
