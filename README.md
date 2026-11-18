@@ -222,6 +222,8 @@ Access control is enforced twice: as a Pinecone metadata filter and as a post-fi
 
 ## Example workflows
 
+A complete guided walkthrough with pass/fail checklists (scenarios A and B, safety checks, audit, admin) is in [`docs/DEMO.md`](docs/DEMO.md).
+
 All examples are run with `python scripts\ask_agent.py "<question>" --verbose`, which prints the real decision trace. The Streamlit UI shows the same trace. The exact answer text comes from the uploaded documents and the model, so it varies between runs.
 
 **Scenario A: private evidence is sufficient.**
