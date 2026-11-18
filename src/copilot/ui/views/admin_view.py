@@ -43,7 +43,7 @@ def _documents_tab(client: CopilotClient, settings: Settings) -> None:
     if not docs:
         st.info("No documents yet. Upload one above, or run `python scripts/ingest_kb.py`.")
         return
-    st.dataframe(documents_table(docs), use_container_width=True, hide_index=True)
+    st.dataframe(documents_table(docs), width="stretch", hide_index=True)
 
     st.subheader("Manage a document")
     chosen = st.selectbox("Document", docs, format_func=lambda d: f"{d['document_name']} (v{d['version']}, {d['access_level']})", key="manage_doc")

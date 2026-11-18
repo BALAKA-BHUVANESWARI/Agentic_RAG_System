@@ -104,7 +104,7 @@ def _active_panel(client: CopilotClient, active: dict) -> None:
 
 # ------------------------------------------------------------------------------ results
 def _table(rows: list[dict]) -> None:
-    st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.dataframe(rows, width="stretch", hide_index=True)
 
 
 def _overview_tab(run: dict, summary: dict) -> None:

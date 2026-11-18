@@ -14,6 +14,11 @@ DOCKERFILE = (PROJECT_ROOT / "Dockerfile")
 COMPOSE = PROJECT_ROOT / "docker-compose.yml"
 DOCKERIGNORE = PROJECT_ROOT / ".dockerignore"
 
+# These checks read the Docker files of the repository. The image deliberately does not contain them, so
+# inside the container they are skipped (they run on the host). On a normal machine a missing file still FAILS.
+INSIDE_THE_IMAGE = Path("/.dockerenv").exists() and not DOCKERFILE.exists()
+pytestmark = pytest.mark.skipif(INSIDE_THE_IMAGE, reason="Docker files are not part of the image; checked on the host")
+
 # Variables that are not application settings (they configure Hugging Face inside the container).
 NON_SETTINGS_ENV = {"HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"}
 SECRET_LIKE = re.compile(r"\b(gsk_|tvly-|pcsk_|sk-)[A-Za-z0-9_\-]{8,}")

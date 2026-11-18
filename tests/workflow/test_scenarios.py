@@ -147,6 +147,17 @@ def test_failed_private_retrieval_is_not_proof_that_external_search_is_appropria
     assert r.answer.abstained and "IT Service Desk" in r.answer.rendered
 
 
+def test_grader_recommending_external_search_cannot_override_an_internal_classification(make_agent, kb):
+    """Regression (eval case I02): an undocumented company question must abstain even if the grader says 'external_search'."""
+    search = FakeSearch([TEAMS_RESULT])
+    h = make_agent(search=search, settings_overrides={"max_rewrite_retries": 1}, QueryClassification=[CLS_INTERNAL],
+                   PrivateGrade=[dict(GRADE_BAD, recommended_action="external_search")], QueryRewrite=[REWRITES[0]])
+    r = h.agent.answer("What is the process to request a second monitor for my desk?")
+    assert search.call_count == 0 and r.tavily_calls == 0 and not r.external_search_triggered and "external_search" not in r.path
+    assert r.answer.abstained and "IT Service Desk" in r.answer.rendered
+    assert h.audit.get(r.request_id).external_search_triggered is False
+
+
 def test_search_service_failure_degrades_to_abstention(make_agent, kb):
     search = FakeSearch(error=ExternalSearchError("ConnectionError: down"))
     h = make_agent(search=search, settings_overrides={"max_rewrite_retries": 0}, QueryClassification=[CLS_EXTERNAL], PrivateGrade=[GRADE_BAD])

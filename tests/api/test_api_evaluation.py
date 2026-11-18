@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import threading
+import time
 
 import pytest
 
@@ -53,11 +54,18 @@ def test_unknown_or_malformed_run_ids_are_404(eval_api):
 
 def test_one_run_at_a_time_cancel_and_resume(eval_api):
     gate = threading.Event()
-    ns, service = eval_api(agent=StubAgent(gate=gate))
+    agent = StubAgent(gate=gate)
+    ns, service = eval_api(agent=agent)
     first = ns.client.post("/evaluation/run", json={"mode": "agentic", "use_judge": False}, headers=ADM)
     assert first.status_code == 202
     run_id = first.json()["run_id"]
     assert service.active_run_id() == run_id
+    # The runner does a retrieval pass before the first case. Wait until the first case is really in flight
+    # (blocked on the gate); otherwise a fast cancel can land before any case starts and done would be 0.
+    deadline = time.monotonic() + 10
+    while not agent.calls and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert agent.calls, "the first case never started"
 
     busy = ns.client.post("/evaluation/run", json={}, headers=ADM)
     assert busy.status_code == 409 and run_id in busy.json()["detail"]

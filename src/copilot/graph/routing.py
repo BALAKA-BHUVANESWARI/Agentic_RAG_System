@@ -3,7 +3,10 @@
 Invariants enforced here:
 * Private retrieval always runs first for in-scope questions.
 * External search needs: insufficient private evidence (or a genuine supplement need),
-  AND search allowed (config + request), AND no sensitive content, AND a public-info angle.
+  AND search allowed (config + request), AND no sensitive content, AND the CLASSIFIER says the
+  question needs current public information (intent ``external_current`` or ``both``).
+  The grader's ``recommended_action`` is a signal for the trace only: it can never open the
+  door to web search by itself (an undocumented company question must abstain).
 * Every loop is bounded by MAX_REWRITE_RETRIES / MAX_VALIDATION_REVISIONS.
 * Retrieved content never reaches this module: it only reads structured fields.
 """
@@ -37,16 +40,17 @@ def external_permitted(state: CopilotState, settings: Settings) -> bool:
 
 
 def external_eligible(state: CopilotState, settings: Settings) -> bool:
-    """After insufficient private evidence: permitted AND the question has a public-information angle.
+    """After insufficient private evidence: permitted AND the classifier found a public-information angle.
 
     A failed retrieval alone is NOT enough: company-specific questions that simply are not
-    documented are abstained, not sent to the web.
+    documented are abstained, not sent to the web. The grader's ``recommended_action`` is
+    deliberately ignored here: an LLM grader once recommended a web search for an internal
+    hardware-request question that the classifier had (correctly) marked ``internal_it``.
     """
     if not external_permitted(state, settings):
         return False
     intent = (state.get("classification") or {}).get("intent")
-    recommended = (state.get("private_grade") or {}).get("recommended_action")
-    return intent in {"external_current", "both"} or recommended == "external_search"
+    return intent in {"external_current", "both"}
 
 
 def wants_external_supplement(state: CopilotState, settings: Settings) -> bool:

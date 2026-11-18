@@ -15,8 +15,15 @@ def _clear_settings_cache():
 
 
 @pytest.fixture
-def make_settings():
-    """Build Settings ignoring any real .env file; override fields via kwargs."""
+def make_settings(monkeypatch):
+    """Build Settings ignoring any real .env file AND any setting present in the process environment.
+
+    Inside the Docker image (``env_file: .env``) or in a shell with ``GROQ_MODEL`` exported, real keys and
+    overrides would otherwise leak into the tests. Tests that need an env var set it themselves with
+    ``monkeypatch.setenv`` after this fixture has run.
+    """
+    for field in Settings.model_fields:
+        monkeypatch.delenv(field.upper(), raising=False)
 
     def _make(**overrides):
         return Settings(_env_file=None, **overrides)

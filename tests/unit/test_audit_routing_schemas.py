@@ -113,8 +113,15 @@ def test_failed_retrieval_alone_does_not_justify_external_search(make_settings):
     s = make_settings(max_rewrite_retries=1)
     undocumented = _st("internal_it", retry_count=1, private_grade=_grade(action="abstain"))
     assert routing.route_after_private_grader(undocumented, s) == "answer_generator"
+    # The grader's recommendation alone must NOT open the door to web search (regression: eval case I02).
     grader_says_public = _st("internal_it", retry_count=1, private_grade=_grade(action="external_search"))
-    assert routing.route_after_private_grader(grader_says_public, s) == "external_search"
+    assert routing.route_after_private_grader(grader_says_public, s) == "answer_generator"
+    assert routing.route_after_rewriter(_st("internal_it", rewrite_failed=True, private_grade=_grade(action="external_search")), s) == "answer_generator"
+    # ...while a classifier-flagged public question still reaches web search, whatever the grader recommends.
+    for intent in ("external_current", "both"):
+        for action in ("abstain", "rewrite_query", "external_search"):
+            st = _st(intent, retry_count=1, private_grade=_grade(action=action))
+            assert routing.route_after_private_grader(st, s) == "external_search"
 
 
 @pytest.mark.parametrize("override", [{"classification": {"intent": "external_current", "contains_sensitive": True}},
