@@ -22,7 +22,8 @@ class RetrievedChunk(BaseModel):
     uploaded_at: str = ""
     last_reviewed: str | None = None
     text: str = ""
-    score: float = 0.0
+    score: float = 0.0  # vector similarity (cosine) from Pinecone
+    rerank_score: float | None = None  # cross-encoder score, set only when reranking ran
 
     @classmethod
     def from_match(cls, match_id: str, score: float, metadata: dict[str, Any]) -> "RetrievedChunk":
@@ -75,3 +76,4 @@ class RetrievalResult(BaseModel):
     chunks: list[RetrievedChunk] = Field(default_factory=list)
     dropped_unauthorized: int = 0
     dropped_low_score: int = 0
+    reranked: bool = False

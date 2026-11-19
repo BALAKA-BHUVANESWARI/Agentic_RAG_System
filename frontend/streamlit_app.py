@@ -12,12 +12,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 import streamlit as st  # noqa: E402
 
 from copilot.config import get_settings  # noqa: E402
-from copilot.ui import runtime  # noqa: E402
+from copilot.ui import runtime, theme  # noqa: E402
 from copilot.ui.views.admin_view import render_admin  # noqa: E402
 from copilot.ui.views.chat_view import render_chat  # noqa: E402
 from copilot.ui.views.sidebar import render_sidebar  # noqa: E402
 
 st.set_page_config(page_title="IT Support Copilot", page_icon="🛠️", layout="wide")
+theme.inject_theme()
 settings = get_settings()
 identity = render_sidebar(settings)
 client = runtime.make_client(identity.role, identity.user_id)

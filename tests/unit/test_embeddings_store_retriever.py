@@ -166,3 +166,95 @@ def test_delete_document_accepts_sdk_list_items(store, index):
     index.list = lambda prefix="", namespace=None: ([SimpleNamespace(id=i) for i in page] for page in original(prefix=prefix, namespace=namespace))
     assert store.delete_document("d1", keep_version=2) == 1
     assert index.ids() == ["d1:v2:0"]
+
+
+# ---- Reranker + top-p (added 2026-11-19) --------------------------------------------
+class _FakeCrossEncoder:
+    """Scores a chunk by how many query words it contains (stands in for the real model)."""
+
+    def __init__(self, fail: bool = False):
+        self.fail, self.calls = fail, []
+
+    def predict(self, pairs):
+        self.calls.append(list(pairs))
+        if self.fail:
+            raise RuntimeError("model unavailable")
+        return [float(sum(w in text.lower() for w in query.lower().split())) for query, text in pairs]
+
+
+def _tc(chunk_id: str, level: str, score: float, text: str) -> RetrievedChunk:
+    return RetrievedChunk(chunk_id=chunk_id, document_id=chunk_id, document_name=f"{chunk_id}.txt", access_level=level, score=score, text=text)
+
+
+def test_reranker_reorders_by_cross_encoder_and_keeps_top_k(settings, embedder):
+    from copilot.vectorstore.reranker import CrossEncoderReranker
+
+    store = _StubStore([
+        _tc("a", "internal", 0.9, "parking rules"),
+        _tc("b", "internal", 0.8, "vpn mfa approval steps"),
+        _tc("c", "internal", 0.7, "vpn only"),
+    ])
+    r = Retriever(settings, embedder=embedder, store=store, reranker=CrossEncoderReranker("x", model=_FakeCrossEncoder()))
+    res = r.retrieve("vpn mfa", "employee", top_k=2)
+    assert res.reranked is True and [c.chunk_id for c in res.chunks] == ["b", "c"]
+    assert res.chunks[0].rerank_score == 2.0 and res.chunks[0].score == 0.8  # cosine score is preserved
+
+
+def test_reranker_never_sees_unauthorized_chunks(settings, embedder):
+    from copilot.vectorstore.reranker import CrossEncoderReranker
+
+    model = _FakeCrossEncoder()
+    store = _StubStore([_tc("pub", "internal", 0.5, "vpn"), _tc("secret", "restricted", 0.9, "vpn vpn")])
+    res = Retriever(settings, embedder=embedder, store=store, reranker=CrossEncoderReranker("x", model=model)).retrieve("vpn", "employee")
+    assert [c.chunk_id for c in res.chunks] == ["pub"]
+    assert all("secret" not in text for call in model.calls for _, text in call)
+
+
+def test_reranker_failure_falls_back_to_vector_order(settings, embedder):
+    from copilot.vectorstore.reranker import CrossEncoderReranker
+
+    store = _StubStore([_tc("a", "internal", 0.9, "x"), _tc("b", "internal", 0.8, "y")])
+    res = Retriever(settings, embedder=embedder, store=store, reranker=CrossEncoderReranker("x", model=_FakeCrossEncoder(fail=True))).retrieve("q", "employee")
+    assert res.reranked is False and [c.chunk_id for c in res.chunks] == ["a", "b"]
+
+
+def test_reranker_fetches_a_larger_candidate_pool(make_settings, tmp_path, embedder, store, index):
+    from copilot.vectorstore.reranker import CrossEncoderReranker
+
+    s = make_settings(sqlite_path=tmp_path / "a.db", retrieval_min_score=0.0, rerank_candidates=15)
+    seen = {}
+    real = store.query
+    store.query = lambda vector, top_k, levels, **kw: seen.setdefault("k", top_k) and real(vector, top_k, levels, **kw)
+    Retriever(s, embedder=embedder, store=store, reranker=CrossEncoderReranker("x", model=_FakeCrossEncoder())).retrieve("vpn", "employee", top_k=5)
+    assert seen["k"] == 15
+
+
+def test_retriever_without_reranker_is_unchanged_and_off_by_default(settings, embedder):
+    assert settings.rerank_enabled is False
+    store = _StubStore([_tc("a", "internal", 0.9, "x"), _tc("b", "internal", 0.8, "y")])
+    res = Retriever(settings, embedder=embedder, store=store).retrieve("q", "employee")
+    assert res.reranked is False and [c.chunk_id for c in res.chunks] == ["a", "b"]
+
+
+def test_top_p_is_sent_only_when_configured(make_settings):
+    from fakes import FakeGroqSDK
+    from copilot.llm.client import GroqClient
+
+    def kwargs_for(**overrides):
+        sdk = FakeGroqSDK(["ok"])
+        GroqClient(make_settings(groq_api_key="k", **overrides), client=sdk).chat([{"role": "user", "content": "hi"}])
+        return sdk.calls[0]
+
+    assert "top_p" not in kwargs_for()
+    assert kwargs_for(groq_top_p=0.9)["top_p"] == 0.9
+
+
+def test_top_p_is_validated_and_blank_env_means_default(make_settings, monkeypatch):
+    with pytest.raises(Exception):
+        make_settings(groq_top_p=0.0)
+    with pytest.raises(Exception):
+        make_settings(groq_top_p=1.5)
+    monkeypatch.setenv("GROQ_TOP_P", "")
+    from copilot.config import Settings
+
+    assert Settings(_env_file=None).groq_top_p is None

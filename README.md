@@ -1,5 +1,7 @@
 # IT Support Copilot: Private-First Agentic RAG
 
+![tests](../../actions/workflows/ci.yml/badge.svg)
+
 A locally runnable IT support assistant for employees. It answers from the company's **internal documents first**, grades the evidence it found, rewrites the query and retries when the evidence is weak, uses **public web search only as a graded, clearly labelled fallback**, cites every claim, **abstains** when reliable evidence is missing, and records the full decision path.
 
 > **Demo data:** every document in `data/kb_documents/` is a **synthetic demo document, not a real company policy**. Each file starts with the line `SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY`.

@@ -87,7 +87,12 @@ class EvaluationService:
     def list_runs(self, limit: int = 20) -> list[dict[str, Any]]:
         """Recent runs, newest first."""
         active = self.active_run_id()
-        return [self._info(r, r["run_id"] == active) for r in self._store.list(limit)]
+        rows = self._store.list(limit)
+        out = [self._info(r, r["run_id"] == active) for r in rows]
+        if active and not any(r["run_id"] == active for r in rows):
+            # The job's database row is written by its worker thread; a request right after start can arrive first.
+            out.insert(0, self._info({"run_id": active, "metadata": {}, "status": "running"}, True))
+        return out
 
     def summary(self, run_id: str) -> dict[str, Any] | None:
         """``summary.json`` of a run (None until it exists)."""

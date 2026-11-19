@@ -1,0 +1,11 @@
+# Base theme. Extra styling (fonts, rulings, route line) is injected by copilot.ui.theme.
+[theme]
+base = "light"
+primaryColor = "#2C3FD1"
+backgroundColor = "#EDF0EA"
+secondaryBackgroundColor = "#E2E7DF"
+textColor = "#141B3D"
+font = "sans serif"
+
+[browser]
+gatherUsageStats = false

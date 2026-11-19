@@ -45,6 +45,9 @@ class Settings(BaseSettings):
     # ---- Groq LLM ------------------------------------------------------
     groq_model: str = "openai/gpt-oss-120b"
     groq_temperature: float = Field(default=0.0, ge=0.0, le=2.0)
+    # Nucleus sampling. None = provider default (1.0). Only sampled tokens are affected, so with
+    # temperature 0 it changes little; it is a determinism guard, not a hallucination fix.
+    groq_top_p: float | None = Field(default=None, gt=0.0, le=1.0)
     groq_timeout_s: float = Field(default=30.0, gt=0)
     groq_max_retries: int = Field(default=2, ge=0, le=5)
     # Reasoning models (e.g. openai/gpt-oss-*) accept low|medium|high; leave empty for other models.
@@ -89,6 +92,10 @@ class Settings(BaseSettings):
     # ---- Retrieval + grading thresholds --------------------------------
     retrieval_top_k: int = Field(default=5, ge=1, le=50)
     retrieval_min_score: float = Field(default=0.25, ge=0.0, le=1.0)
+    # Optional second-stage reranker (local cross-encoder). Off by default so existing evaluation numbers stay valid.
+    rerank_enabled: bool = False
+    rerank_model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    rerank_candidates: int = Field(default=20, ge=1, le=50, description="Chunks fetched from Pinecone before reranking down to top_k.")
     private_evidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
     external_evidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
     external_max_age_days: int = Field(default=365, gt=0)
@@ -162,6 +169,11 @@ class Settings(BaseSettings):
     @classmethod
     def _normalize_extensions(cls, value: list[str]) -> list[str]:
         return [e.lower() if e.startswith(".") else f".{e.lower()}" for e in value]
+
+    @field_validator("groq_top_p", mode="before")
+    @classmethod
+    def _empty_top_p_is_none(cls, value: object) -> object:
+        return None if isinstance(value, str) and not value.strip() else value
 
     @field_validator("groq_reasoning_effort", mode="before")
     @classmethod

@@ -124,6 +124,8 @@ class GroqClient:
             "temperature": s.groq_temperature if temperature is None else temperature,
             "max_tokens": max_tokens or s.llm_max_tokens,
         }
+        if s.groq_top_p is not None:
+            kwargs["top_p"] = s.groq_top_p
         if json_mode:
             kwargs["response_format"] = {"type": "json_object"}
         if s.groq_reasoning_effort:  # sent via extra_body so it works across SDK versions

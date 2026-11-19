@@ -32,10 +32,11 @@ def main() -> int:
         args.query, args.role, top_k=args.top_k, filters=RetrievalFilters(category=args.category)
     )
     print(f"role={result.role} status={result.status} returned={len(result.chunks)} "
-          f"dropped_unauthorized={result.dropped_unauthorized} dropped_low_score={result.dropped_low_score}\n")
+          f"dropped_unauthorized={result.dropped_unauthorized} dropped_low_score={result.dropped_low_score} reranked={result.reranked}\n")
     for i, c in enumerate(result.chunks, start=1):
         snippet = " ".join(c.text.split())[:140]
-        print(f"{i}. score={c.score:.3f} [{c.access_level}] {c.document_name} ({c.location})\n   {snippet}...\n")
+        rr = f" rerank={c.rerank_score:.2f}" if c.rerank_score is not None else ""
+        print(f"{i}. score={c.score:.3f}{rr} [{c.access_level}] {c.document_name} ({c.location})\n   {snippet}...\n")
     return 0
 
 

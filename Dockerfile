@@ -24,11 +24,18 @@ ARG EMBEDDING_MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
 RUN python -c "import sys; from sentence_transformers import SentenceTransformer; SentenceTransformer(sys.argv[1])" "${EMBEDDING_MODEL_NAME}" \
     && chmod -R a+rX /opt/hf-cache
 
+# Bake the optional reranker (cross-encoder) too: containers run with HF_HUB_OFFLINE=1 and cannot download it.
+# Must match RERANK_MODEL_NAME at run time. It is only used when RERANK_ENABLED=true.
+ARG RERANK_MODEL_NAME=cross-encoder/ms-marco-MiniLM-L-6-v2
+RUN python -c "import sys; from sentence_transformers import CrossEncoder; CrossEncoder(sys.argv[1])" "${RERANK_MODEL_NAME}" \
+    && chmod -R a+rX /opt/hf-cache
+
 # Application code, the synthetic demo knowledge base and the labelled evaluation dataset.
 # (.dockerignore keeps .env, virtual environments, databases, uploads and evaluation results out.)
 COPY pyproject.toml ./
 COPY src ./src
 COPY frontend ./frontend
+COPY .streamlit ./.streamlit
 COPY scripts ./scripts
 COPY tests ./tests
 COPY data/kb_documents ./data/kb_documents

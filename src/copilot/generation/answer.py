@@ -67,10 +67,12 @@ class AnswerGenerator:
         self._settings = settings or get_settings()
         self._llm = llm or GroqClient(self._settings)
 
-    def generate(self, question: str, evidence: list[EvidenceItem], feedback: str | None = None) -> GeneratedAnswer:
+    def generate(self, question: str, evidence: list[EvidenceItem], feedback: str | None = None, *, _citation_retry: bool = False) -> GeneratedAnswer:
         """Answer ``question`` from ``evidence`` or abstain. Never raises for service failures.
 
         ``feedback`` (from the final validator) asks the model to revise a previous draft.
+        A draft with no valid ``[n]`` marker is retried once with an explicit reminder; a second
+        uncited draft abstains (``uncited_answer``). ``_citation_retry`` is internal.
         """
         model = self._settings.groq_model
         if not evidence:
@@ -103,6 +105,16 @@ class AnswerGenerator:
         body, removed = strip_invalid_markers(draft.answer.strip(), valid)
         used = extract_markers(body)
         if not used:
+            if not _citation_retry:
+                log.warning("Answer had no valid citations; retrying once", extra={"removed": removed})
+                reminder = (
+                    "Your previous draft had no valid citation markers. Rewrite it so that every material claim "
+                    "is followed by the evidence id in square brackets, such as [1], using only ids that exist above."
+                )
+                retry = self.generate(question, evidence, feedback=f"{feedback}\n{reminder}" if feedback else reminder, _citation_retry=True)
+                total = usage.model_copy()
+                total.add(retry.usage)
+                return retry.model_copy(update={"usage": total})
             log.warning("Answer had no valid citations; abstaining", extra={"removed": removed})
             return make_abstention("uncited_answer", usage=usage, model=model, invalid_markers_removed=removed)
 

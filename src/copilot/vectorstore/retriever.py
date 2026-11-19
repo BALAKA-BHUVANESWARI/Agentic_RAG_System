@@ -18,7 +18,13 @@ log = get_logger(__name__)
 class Retriever:
     """Access-filtered semantic retrieval over the Pinecone index."""
 
-    def __init__(self, settings: Settings | None = None, embedder: Any | None = None, store: Any | None = None):
+    def __init__(
+        self,
+        settings: Settings | None = None,
+        embedder: Any | None = None,
+        store: Any | None = None,
+        reranker: Any | None = None,
+    ):
         self._settings = settings or get_settings()
         if embedder is None:
             from copilot.embeddings.service import get_embedding_service
@@ -28,8 +34,13 @@ class Retriever:
             from copilot.vectorstore.pinecone_store import PineconeStore
 
             store = PineconeStore(self._settings)
+        if reranker is None and self._settings.rerank_enabled:
+            from copilot.vectorstore.reranker import get_reranker
+
+            reranker = get_reranker(self._settings)
         self._embedder = embedder
         self._store = store
+        self._reranker = reranker
 
     def retrieve(
         self,
@@ -57,9 +68,10 @@ class Retriever:
 
         filters = filters or RetrievalFilters()
         vector = self._embedder.embed_query(query)
+        fetch_k = max(k, s.rerank_candidates) if self._reranker is not None else k
         raw = self._store.query(
             vector,
-            k,
+            fetch_k,
             levels,
             category=filters.category,
             department=filters.department,
@@ -70,7 +82,13 @@ class Retriever:
         if dropped_unauthorized:
             log.warning("Dropped unauthorized chunks from retrieval", extra={"count": dropped_unauthorized})
         kept = [c for c in authorized if c.score >= threshold]
+        dropped_low_score = len(authorized) - len(kept)
         kept.sort(key=lambda c: c.score, reverse=True)
+        reranked = False
+        if self._reranker is not None and len(kept) > 1:
+            kept, reranked = self._reranker.rerank(query, kept)
+        if self._reranker is not None:
+            kept = kept[:k]
         return RetrievalResult(
             query=query,
             role=role,
@@ -78,5 +96,6 @@ class Retriever:
             status="ok" if kept else "empty",
             chunks=kept,
             dropped_unauthorized=dropped_unauthorized,
-            dropped_low_score=len(authorized) - len(kept),
+            dropped_low_score=dropped_low_score,
+            reranked=reranked,
         )

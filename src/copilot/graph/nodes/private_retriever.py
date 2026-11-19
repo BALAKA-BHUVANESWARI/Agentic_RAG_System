@@ -31,6 +31,7 @@ def make_private_retriever(deps: GraphDeps):
             "document_ids": sorted({c.document_id for c in chunks}),
             "scores": [{"chunk_id": c.chunk_id, "document": c.document_name, "score": round(c.score, 4)} for c in chunks],
             "dropped_unauthorized": result.dropped_unauthorized,
+            "reranked": result.reranked,
         }
         return {
             "retrieved_chunks": [c.model_dump() for c in chunks],
@@ -41,6 +42,7 @@ def make_private_retriever(deps: GraphDeps):
                 attempt=attempt, query=query, role=result.role,
                 documents=[f"{c.document_name} ({c.score:.2f})" for c in chunks],
                 dropped_unauthorized=result.dropped_unauthorized,
+                reranked=result.reranked,
             ),
         }
 

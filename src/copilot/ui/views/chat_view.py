@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from copilot.ui import theme
 from copilot.ui.api_client import ApiError, CopilotClient
 from copilot.ui.formatting import (format_citation, format_ms, path_text, split_external_warning, timeline_rows,
                                    trace_sections)
@@ -10,6 +11,7 @@ from copilot.ui.formatting import (format_citation, format_ms, path_text, split_
 
 def _render_trace(r: dict, key: str) -> None:
     """Decision trace built from the real graph events returned by the API."""
+    st.markdown(theme.route_html(r["path"]), unsafe_allow_html=True)
     st.caption(f"Path: {path_text(r['path'])}")
     cols = st.columns(5)
     cols[0].metric("Total time", format_ms(r.get("latency_ms")))
@@ -31,7 +33,7 @@ def _render_feedback(client: CopilotClient, r: dict, idx: int) -> None:
     if rid in given:
         st.caption(f"Thanks, feedback recorded ({given[rid]}).")
         return
-    up, down, _ = st.columns([1, 1, 6])
+    up, down, _ = st.columns([2, 2, 3])
     for col, rating, label in ((up, "positive", "👍 Helpful"), (down, "negative", "👎 Not helpful")):
         if col.button(label, key=f"fb_{rating}_{idx}"):
             try:
@@ -48,6 +50,7 @@ def _render_assistant(client: CopilotClient, m: dict, idx: int) -> None:
             st.error(m["error"])
             return
         r = m["response"]
+        st.markdown(theme.verdict_html(r["abstained"], r["used_external"], (r.get("validation") or {}).get("passed")), unsafe_allow_html=True)
         warning, body = split_external_warning(r["answer"], r["used_external"])
         if warning:
             st.warning(warning, icon="🌐")
@@ -65,8 +68,8 @@ def _render_assistant(client: CopilotClient, m: dict, idx: int) -> None:
 
 def render_chat(client: CopilotClient, allow_external: bool) -> None:
     """Draw the chat page and handle a new question."""
-    st.header("IT Support Copilot")
-    st.caption("Company IT documents are searched first. Public web search is used only when they are not enough, and is always labelled.")
+    st.header("Ask the IT desk")
+    st.markdown('<p class="lede">Company IT documents are searched first. Public web search is used only when they are not enough, and is always labelled.</p>', unsafe_allow_html=True)
     messages: list[dict] = st.session_state.setdefault("messages", [])
     for i, m in enumerate(messages):
         if m["role"] == "user":
@@ -75,7 +78,13 @@ def render_chat(client: CopilotClient, allow_external: bool) -> None:
         else:
             _render_assistant(client, m, i)
 
-    question = st.chat_input("Ask an IT support question…", key="question")
+    if not messages:
+        st.markdown('<div class="starters-title">Try a question</div>', unsafe_allow_html=True)
+        for j, text in enumerate(theme.STARTERS):
+            if st.button(text, key=f"starter_{j}"):
+                st.session_state["starter"] = text
+                st.rerun()
+    question = st.chat_input("Ask an IT support question…", key="question") or st.session_state.pop("starter", None)
     if not question:
         return
     messages.append({"role": "user", "content": question})

@@ -29,9 +29,19 @@ def test_invalid_markers_are_removed_not_trusted(make_generator):
 
 def test_answer_without_valid_citations_is_rejected(make_generator):
     for answer in ("No citations at all.", "Only a fake one [5]."):
-        gen, _ = make_generator({"can_answer": True, "answer": answer})
+        bad = {"can_answer": True, "answer": answer}
+        gen, llm = make_generator(bad, bad)  # the first draft and the single retry are both uncited
         out = gen.generate("q", [_ev(1)])
         assert out.abstained and out.abstention_reason == "uncited_answer" and out.citations == []
+        assert len(llm.calls) == 2 and out.usage.calls == 2
+
+
+def test_an_uncited_first_draft_is_retried_once_with_a_reminder(make_generator):
+    gen, llm = make_generator({"can_answer": True, "answer": "Submit a ticket."}, {"can_answer": True, "answer": "Submit a ticket [1]."})
+    out = gen.generate("q", [_ev(1)])
+    assert not out.abstained and [c.ref for c in out.citations] == [1]
+    assert len(llm.calls) == 2 and "no valid citation markers" in llm.calls[1][1]["content"]
+    assert out.usage.calls == 2 and out.usage.total_tokens == 240
 
 
 def test_llm_can_say_it_cannot_answer(make_generator):

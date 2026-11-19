@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import streamlit as st
 
 from copilot.config import Settings
-from copilot.ui import runtime
+from copilot.ui import runtime, theme
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class Identity:
 def render_sidebar(settings: Settings) -> Identity:
     """Draw the sidebar and return the current selections."""
     with st.sidebar:
-        st.title("🛠️ IT Support Copilot")
+        st.markdown(theme.wordmark(), unsafe_allow_html=True)
         st.warning(
             "**Local demo identity.** You choose your own role here. This is NOT authentication or production "
             "identity management; the API trusts the role it is told.",
