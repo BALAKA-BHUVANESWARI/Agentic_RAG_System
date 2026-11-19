@@ -17,5 +17,6 @@ jobs:
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
-      - name: Run the test suite (fakes only: no API keys, no network calls to Groq, Pinecone or Tavily)
+      # Fakes only - no API keys and no network calls to Groq, Pinecone or Tavily.
+      - name: Run the test suite
         run: python -m pytest -q
