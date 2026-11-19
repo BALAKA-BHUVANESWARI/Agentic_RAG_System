@@ -1,0 +1,33 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Email and Calendar Guide
+Category: email
+Department: IT
+Access-Level: internal
+Version: 1
+Last-Reviewed: 2025-03-10
+
+## 1. Mailbox size
+Every Acme Demo Corp employee has a 50 GB Outlook mailbox. You receive a warning at 45 GB. At 50 GB you can no longer send mail until you free space. Delete large attachments or use Online Archive to move old mail.
+
+## 2. Online Archive
+Online Archive is turned on automatically. Mail older than 2 years moves to the archive on its own. Open the archive from the left folder pane in Outlook, under "Online Archive".
+
+## 3. Setting an out-of-office reply
+1. In Outlook, choose File, then Automatic Replies.
+2. Select "Send automatic replies" and set the start and end dates.
+3. Write one message for colleagues and, if needed, a separate one for people outside the company.
+4. Click OK. The reply stops by itself on the end date.
+
+## 4. Shared mailboxes
+Team mailboxes such as a department inbox are shared mailboxes. To get access, open a ticket in the Service Portal and choose "Email access". The mailbox owner must approve. Access normally appears in Outlook within 60 minutes. Mail sent from a shared mailbox shows the shared address as the sender.
+
+## 5. Attachment limits
+The maximum email size is 25 MB including attachments. For larger files, upload to OneDrive and send a link instead. Executable files (.exe, .bat, .js) are blocked in attachments.
+
+## 6. Reporting suspicious email
+Use the "Report Phish" button on the Outlook ribbon. Do not click links or open attachments in the message. Reporting sends the message to the security team without forwarding it.
+
+## 7. Calendar tips
+- Meeting rooms are booked by adding the room as a resource in the meeting invite.
+- Rooms are released automatically if nobody accepts the meeting check-in within 15 minutes.
+- To share your calendar, choose Share on the Calendar tab and pick the colleague. Colleagues see free/busy by default.

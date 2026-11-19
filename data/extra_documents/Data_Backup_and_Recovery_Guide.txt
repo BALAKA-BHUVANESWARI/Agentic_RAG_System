@@ -1,0 +1,28 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Data Backup and Recovery Guide
+Category: backup
+Department: IT
+Access-Level: internal
+Version: 1
+Last-Reviewed: 2025-03-01
+
+## 1. What is backed up
+- OneDrive files: protected by the Microsoft cloud with a 93-day Recycle Bin.
+- Email: stored on the mail server with a 30-day deleted items recovery window.
+- Network file shares: backed up every night and kept for 35 days.
+- Laptop local drives (the C: drive): NOT backed up.
+
+## 2. Recovering a deleted email
+In Outlook, open Deleted Items and choose "Recover items recently removed from this folder". Items can be recovered for 30 days after deletion.
+
+## 3. Recovering a file from a network share
+Open a ticket in the Service Portal and choose "File restore". Give the full path of the file and the date it was last good. Restores from nightly backup are usually completed within 1 business day.
+
+## 4. Laptop failure
+If a laptop drive fails, files stored only on the C: drive may be lost. Keep work files in OneDrive. A replacement laptop is set up with your standard software and your OneDrive files return when you sign in.
+
+## 5. Ransomware or sudden file encryption
+Disconnect the laptop from the network immediately by turning off Wi-Fi or unplugging the cable. Do not switch the laptop off. Report it at once to the IT Service Desk at extension 5000.
+
+## 6. Retention reminder
+Backups are for recovery, not for archiving. Files deleted more than 35 days ago from a network share cannot be restored.

@@ -1,0 +1,34 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: IT Service Desk Employee Guide
+Category: service-desk
+Department: IT
+Access-Level: public
+Version: 1
+Last-Reviewed: 2025-01-30
+
+## 1. How to contact the Service Desk
+- Service Portal: the fastest way. Open the portal from the intranet home page and choose "Raise a ticket".
+- Phone: extension 5000.
+- In person: the IT Service Desk on the ground floor.
+
+## 2. Opening hours
+The Service Desk is open Monday to Friday from 8:00 to 18:00. It is closed on public holidays. Tickets raised outside these hours are picked up on the next working day.
+
+## 3. What to include in a ticket
+- A short description of the problem
+- What you were doing when it happened
+- The exact error message or a screenshot
+- Your laptop name (shown on the sticker under the laptop)
+- Whether the problem blocks your work completely
+
+## 4. Tracking a ticket
+Open the Service Portal and choose "My tickets". You also receive an email whenever the ticket status changes. Reply to the email to add information.
+
+## 5. Identity check
+For your security the Service Desk will verify your identity before changing an account. They will never ask for your password or an MFA code. If anyone asks for these, refuse and report it.
+
+## 6. Closing a ticket
+A ticket is closed after the agent confirms the fix with you. If the problem comes back within 5 days, reply to the closure email to reopen it.
+
+## 7. Feedback
+After a ticket closes you can rate the service in the email survey. Ratings are reviewed monthly.

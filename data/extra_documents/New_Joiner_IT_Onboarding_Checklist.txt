@@ -1,0 +1,38 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: New Joiner IT Onboarding Checklist
+Category: onboarding
+Department: IT
+Access-Level: public
+Version: 1
+Last-Reviewed: 2025-01-15
+
+## 1. Before your first day
+Your manager submits a "New Starter" request in the Service Portal at least 5 business days before your start date. IT then prepares your laptop, user account and email address.
+
+## 2. Collecting your laptop
+Collect your laptop from the IT Service Desk on your first morning between 9:00 and 10:00. Bring photo identification. You will sign for the laptop and receive a power adapter and a laptop bag.
+
+## 3. First sign-in
+1. Start the laptop and connect to Acme-Corp Wi-Fi or a wired dock.
+2. Sign in with the temporary password on your welcome letter.
+3. You must choose a new password immediately.
+4. Enrol in multi-factor authentication when prompted. See the MFA Guidelines for the steps.
+
+## 4. Accounts you receive on day one
+- Company email and calendar (Outlook)
+- Microsoft Teams
+- OneDrive with 1 TB of storage
+- Access to the intranet
+- Access to Software Center for approved applications
+
+## 5. Access that needs a request
+VPN access, shared mailboxes and specialist software are not given automatically. Ask your manager to request them in the Service Portal.
+
+## 6. First-week checklist
+- Complete the security awareness training in the learning portal within 7 days.
+- Install the Acme SecureLink VPN client from Software Center.
+- Set up your voicemail and Teams profile picture.
+- Add your phone number to your account recovery details.
+
+## 7. Getting help
+Contact the IT Service Desk through the Service Portal or at extension 5000 on weekdays between 8:00 and 18:00.

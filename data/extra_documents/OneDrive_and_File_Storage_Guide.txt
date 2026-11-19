@@ -1,0 +1,30 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: OneDrive and File Storage Guide
+Category: storage
+Department: IT
+Access-Level: internal
+Version: 1
+Last-Reviewed: 2025-02-20
+
+## 1. What OneDrive is for
+OneDrive is the approved place to keep personal work files. Each employee has 1 TB of OneDrive storage. Do not store company files on USB drives or personal cloud services.
+
+## 2. Syncing your Desktop and Documents folders
+Managed laptops back up the Desktop, Documents and Pictures folders to OneDrive automatically (Known Folder Move). Look for the blue cloud icon in the system tray. A green tick on a file means it is stored on the laptop and in the cloud. A cloud outline means it is online-only and downloads when you open it.
+
+## 3. Restoring deleted files
+Deleted files stay in the OneDrive Recycle Bin for 93 days. To restore, open OneDrive in the browser, choose Recycle bin, select the files and click Restore. For older versions of a file, right-click it, choose Version history and restore the version you need.
+
+## 4. Sharing files
+- Share with colleagues by right-clicking a file and choosing Share, then enter their names.
+- Sharing links with people outside the company is not allowed for files classified as Internal or higher unless your manager approves it.
+- Links to external guests expire after 30 days.
+
+## 5. Sync problems
+1. Check that you are online and signed in with your company account.
+2. Right-click the OneDrive cloud icon, choose Pause, then Resume.
+3. If a file shows a red cross, rename it: file names cannot contain the characters " * : < > ? / \ |.
+4. If the problem continues, sign out of OneDrive and sign in again. Open a ticket if it still fails.
+
+## 6. File size
+The largest single file OneDrive can sync is 250 GB. Path names longer than 400 characters will not sync.

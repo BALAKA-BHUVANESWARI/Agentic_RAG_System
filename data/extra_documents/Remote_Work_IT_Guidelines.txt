@@ -1,0 +1,37 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Remote Work IT Guidelines
+Category: remote-work
+Department: IT
+Access-Level: internal
+Version: 1
+Last-Reviewed: 2025-02-05
+
+## 1. Approved equipment
+Use only your company-managed laptop for work. Personal laptops and tablets must not be used to open company files or sign in to company systems.
+
+## 2. Home network
+- Change the default administrator password on your home router.
+- Use WPA2 or WPA3 encryption on your home Wi-Fi.
+- Keep the router firmware up to date.
+
+## 3. Public places
+When working in a cafe, hotel or airport:
+- Connect to the VPN before opening any internal system.
+- Do not use public USB charging ports. Use your own power adapter.
+- Use a privacy screen or position yourself so others cannot read your screen.
+- Lock your laptop with Windows key + L whenever you step away.
+
+## 4. Video calls from home
+Use Microsoft Teams for all work meetings. Blur your background if your home is visible. Do not record a meeting unless every participant has been told.
+
+## 5. Working abroad
+Working from another country for more than 5 working days needs manager approval and a note to the IT Service Desk so that sign-in alerts from the new location are not mistaken for an attack.
+
+## 6. Internet problems at home
+1. Restart your router and wait 3 minutes.
+2. Try a wired connection if you have one.
+3. If you can browse but cannot reach internal sites, reconnect the VPN.
+4. If the VPN will not connect, follow the VPN Connection Guide.
+
+## 7. Printing at home
+Printing company documents at home is not permitted. Use the office printers or share the document electronically.

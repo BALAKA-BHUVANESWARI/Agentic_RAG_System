@@ -1,0 +1,16 @@
+Office Access and Equipment Guide (DEMO DOCUMENT - synthetic, not a real company policy)
+
+1. Visitor Wi-Fi
+Visitors connect to the network named "Northwind-Guest". The daily guest code is printed at the reception desk and expires at 8 PM. Guests must not use the "Northwind-Corp" network.
+
+2. Parking
+Employees may park in Lot B after 6 PM using badge code 4417. Lot A is reserved for visitors and executives.
+
+3. Replacing a lost access badge
+Report a lost badge to the Security Desk (extension 5500) within 24 hours. A temporary badge is issued the same day. A permanent replacement takes 3 business days and costs nothing for the first replacement.
+
+4. Requesting a second monitor
+Submit a Hardware Request ticket in the Service Portal and choose "Peripherals". Manager approval is required. Delivery takes up to 5 business days.
+
+5. Printer problems
+If the floor printer shows "Offline", restart it with the power button and wait 2 minutes. If it is still offline, open a ticket with the printer label number (for example PRN-4F-02).

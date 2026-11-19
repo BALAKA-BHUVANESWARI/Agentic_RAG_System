@@ -1,0 +1,29 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Meeting Room and AV Guide
+Category: meeting-rooms
+Department: Facilities
+Access-Level: public
+Version: 1
+Last-Reviewed: 2024-12-18
+
+## 1. Booking a room
+Add the room as a resource when you create a meeting invite in Outlook. Rooms are released if nobody checks in within 15 minutes of the start time. The largest room, Boardroom 1, holds 20 people.
+
+## 2. Showing your screen
+- Wired: connect the HDMI or USB-C cable from the table box to your laptop. The display wakes automatically.
+- Wireless: press the Share button on the room panel and choose your laptop from the list.
+
+## 3. Starting a Teams meeting in a room
+Touch "Join" on the room panel and select the meeting shown. The camera and microphones are built in. Do not join the same meeting from your laptop in the room, or you will get audio feedback. If you must, mute the laptop speaker and microphone.
+
+## 4. Display shows no signal
+1. Check that the cable is firmly connected at both ends.
+2. Press Windows key + P and choose Duplicate.
+3. Try the other cable on the table.
+4. If it still fails, call the IT Service Desk at extension 5000 and quote the room name.
+
+## 5. Audio problems
+If people cannot hear you, check that the room microphone is not muted (a red light means muted). If the room speaker is silent, check that the panel volume is above 3.
+
+## 6. Leaving the room
+Close the meeting on the panel, take your cable and wipe any whiteboard. Report broken equipment to the Service Desk.

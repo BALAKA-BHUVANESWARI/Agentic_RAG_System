@@ -1,0 +1,28 @@
+SYNTHETIC DEMO DOCUMENT — NOT A REAL COMPANY POLICY
+Title: Windows and Software Updates Guide
+Category: updates
+Department: IT
+Access-Level: internal
+Version: 1
+Last-Reviewed: 2025-02-28
+
+## 1. How updates are delivered
+Managed laptops receive Windows and security updates automatically. Most updates install in the background and ask for a restart afterwards.
+
+## 2. Restart deadline
+When an update needs a restart you can postpone it for up to 3 days. After that the laptop restarts automatically outside active hours (8:00 to 18:00). Save your work before leaving the laptop overnight.
+
+## 3. Checking for updates
+Open Settings, choose Windows Update and click "Check for updates". If an update fails twice, restart and try again. If it still fails, open a ticket and include the update code, for example 0x80070002.
+
+## 4. Browser updates
+Microsoft Edge is the supported browser and updates itself. Restart Edge when you see the green or orange arrow in the corner. Other browsers are not supported.
+
+## 5. Application updates
+Updates for approved applications appear in Software Center under the "Updates" tab. Install them when prompted. Critical security updates are installed automatically and cannot be postponed.
+
+## 6. Why is my laptop slow after an update?
+It can take up to 1 hour after a major update for the laptop to finish background tasks. If it is still slow the next day, see the Laptop Troubleshooting Guide.
+
+## 7. Unsupported systems
+Laptops that cannot run the current Windows version are replaced during the normal hardware refresh. Do not postpone updates by disconnecting from the network.
