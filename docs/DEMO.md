@@ -101,11 +101,11 @@ Fill in the tables above, then add screenshots to `docs/screenshots/` using the 
 
 | Screenshot | File |
 |---|---|
-| Chat with a private-evidence answer and citations (scenario A) | `docs/screenshots/chat-private.png` |
-| Decision trace for the Teams question (scenario B) | `docs/screenshots/trace-external.png` |
-| External-information warning | `docs/screenshots/external-warning.png` |
+| Chat with a private-evidence answer and citations (scenario A) | `docs/screenshots/Chat-Private.png` |
+| Decision trace for the Teams question (scenario B) | `docs/screenshots/External_Trace_Details.png` |
+| External-information warning | `docs/screenshots/External_Warning.png` |
 | Admin: document management | `docs/screenshots/admin-documents.png` |
-| Admin: evaluation dashboard | `docs/screenshots/evaluation-dashboard.png` |
+| Admin: evaluation dashboard | `docs/screenshots/evaluation-answer-quality.png` |
 
 Do not include API keys, `.env` contents or other secrets in screenshots or pasted output.
 

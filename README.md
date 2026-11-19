@@ -374,12 +374,42 @@ docker compose run --rm tests                      # unit tests inside the conta
 
 ## Screenshots
 
-_Add screenshots here after a demo run._
+All screenshots are from a local run with the synthetic demo documents. The role selector in the sidebar is the local demo identity, not authentication.
 
-| Screen | File |
-|---|---|
-| Chat with a private-evidence answer and citations (scenario A) | `docs/screenshots/chat-private.png` |
-| Decision trace for the Teams outage question (scenario B) | `docs/screenshots/trace-external.png` |
-| External-information warning | `docs/screenshots/external-warning.png` |
-| Admin: document management | `docs/screenshots/admin-documents.png` |
-| Admin: evaluation dashboard | `docs/screenshots/evaluation-dashboard.png` |
+**Admin: document management** (11 synthetic documents, status, chunks, access level)
+
+![Admin documents](docs/screenshots/admin-documents.png)
+
+**Admin: evaluation, start a run**
+
+![Evaluation start run](docs/screenshots/evaluation-start-run.png)
+
+**Evaluation: retrieval metrics** (run `20261119T120610Z-f01dbc`, document and chunk level Recall@K, Precision@K, nDCG@K)
+
+![Evaluation retrieval](docs/screenshots/evaluation-retrieval.png)
+
+**Evaluation: answer quality** (baseline RAG vs agentic workflow)
+
+![Evaluation answer quality](docs/screenshots/evaluation-answer-quality.png)
+
+**Evaluation: routing and external search**
+
+![Evaluation routing](docs/screenshots/evaluation-routing.png)
+
+![Evaluation external search, rewriting and grader confidence](docs/screenshots/evaluation-routing-2.png)
+
+**Chat: answer from company documents** (scenario A, VPN question, employee role, cited from the internal VPN guide)
+
+![Chat with a private-evidence answer](docs/screenshots/Chat-Private.png)
+
+**Chat: answer with public web sources** (scenario B, Teams outage question: the external-information warning appears above the answer, and the cited source is a Microsoft Learn page)
+
+![External-information warning and cited public source](docs/screenshots/External_Warning.png)
+
+**Decision trace for the same question** (real graph path: classifier, private retrieval and grading, two rewrites, external search and grading, answer, validation, audit; 19.1 s, 9 LLM calls, 1 Tavily call)
+
+![Decision trace path and totals](docs/screenshots/External_Trace_Details.png)
+
+![Chat answer with public sources](docs/screenshots/Trace-External.png)
+
+_Live web results vary between runs, so the Teams question can abstain instead of answering on some runs._
