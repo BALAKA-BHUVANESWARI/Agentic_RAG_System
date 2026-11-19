@@ -310,39 +310,41 @@ Press Ctrl+C once to stop after the current case; the run stays resumable. A cir
 
 ### Results
 
-One clean run on a single model: run `20261118T062347Z-eb71dc` (2026-11-18), `openai/gpt-oss-120b`, LLM judge on, 3 questions per category = **24 questions per system** (48 units, 0 errors), `--per-category 3 --delay 5`, free Groq tier. The run's folder holds `summary.json`, `cases.csv` and `metrics.csv`.
+Latest clean run, after the routing fix, on a single model: run `20261119T120610Z-f01dbc` (2026-11-19), `openai/gpt-oss-120b`, reranker **off**, LLM judge on, 3 questions per category = **24 questions per system** (48 units, 0 errors), `--per-category 3 --delay 5`, free Groq tier, corpus = the 11 synthetic documents. The run's folder holds `summary.json`, `cases.csv`, `metrics.csv` and `config.json` (which records the settings used).
 
 > **This is a small, single run (24 questions per system, below the dashboard's 30-question threshold).** Differences of a few points are noise, and no winner is declared from it.
 
 | Metric | Baseline RAG | Agentic workflow |
 |---|---|---|
-| Overall correct | 88% (21/24) | 88% (21/24) |
-| Answerable questions answered correctly | 80% (12/15) | 80% (12/15) |
-| False abstentions | 20% (3/15) | 20% (3/15) |
+| Overall correct | 88% (21/24) | 92% (22/24) |
+| Answerable questions answered correctly | 80% (12/15) | 87% (13/15) |
+| False abstentions | 20% (3/15) | 13% (2/15) |
 | Correct abstentions | 100% (9/9) | 100% (9/9) |
 | Hallucinated answers (should have abstained) | 0% (0/9) | 0% (0/9) |
-| Citation correct | 92% (11/12) | 92% (11/12) |
-| Faithful (LLM judge) | 100% (12/12) | 100% (12/12) |
-| Private-first routing accuracy | n/a | 100% (21/21) |
-| Unnecessary external searches | n/a | 5% (1/21) |
-| External fallback accuracy | n/a | 0% (0/3) |
-| Query-rewrite success | n/a | 100% (3/3) |
-| Evidence-grading accuracy | n/a | 100% (21/21) |
+| Citation correct | 92% (11/12) | 91% (10/11) |
+| Faithful (LLM judge) | 100% (12/12) | 100% (13/13) |
+| Private-first routing accuracy | n/a | 95% (20/21) |
+| Unnecessary external searches | n/a | 0% (0/21) |
+| External fallback accuracy | n/a | 67% (2/3) |
+| Query-rewrite success | n/a | 0% (0/1) |
+| Evidence-grading accuracy | n/a | 95% (19/20) |
 | Final-validation failures | n/a | 0% (0/24) |
 | Error rate | 0% (0/24) | 0% (0/24) |
-| Average / P95 latency | 2.7 s / 4.8 s | 24.2 s / 52.6 s |
-| Total tokens | 22,051 | 116,849 |
-| Approx. cost (USD) | 0.004 | 0.066 |
+| Average / P95 latency | 2.2 s / 3.9 s | 23.3 s / 61.6 s |
+| Total tokens | 21,980 | 109,792 |
+| Approx. cost (USD) | 0.004 | 0.049 |
 
 Retrieval (12 questions with expected documents): document recall@5 1.00, document MRR 1.00, chunk precision@5 0.32, chunk nDCG@5 0.87.
 
 **What this run does and does not show**
 
-- On answer quality the two systems were identical on this sample. The agentic workflow did **not** show a quality advantage here, and it used about 5.3 times the tokens and about 9 times the average latency (latency includes free-tier rate-limit waits, so the gap is inflated).
-- All three failures in each system are the current-information questions E01 to E03 (Microsoft 365 / Teams outage and status). The baseline cannot search the web by design. The agentic workflow did try external search for all three, but **none produced an accepted, cited answer** (external fallback accuracy 0/3: the search results were not accepted by the grader, or the answer ended without a valid citation), so it abstained and referred the user to the IT Service Desk. That is the safe outcome, but it means the external-fallback path has not yet been shown to work on this question set.
-- One question (I02, a second-monitor request that is company-specific and undocumented) triggered a public search although it should not have. It still ended in a correct abstention. The cause was a routing rule that let the grader's `external_search` recommendation open the door to web search even though the classifier had marked the question as internal. That rule was fixed after this run (only the classifier's `external_current` or `both` intent can now allow a search) and is covered by new unit and workflow tests. **The table above was measured before the fix**, so the unnecessary-search figure has not been re-measured yet.
-- The routing and grading numbers (private-first 21/21, rewrite success 3/3, grading accuracy 21/21) describe only the agentic workflow and come from a small sample.
+- The agentic workflow answered one more question than the baseline (22 vs 21 of 24). That difference is within noise for a sample this size, and it came from live web results (see next point), not from better use of the internal documents. The agentic workflow used about 5 times the tokens and about 10 times the average latency (latency includes free-tier rate-limit waits, so the gap is inflated).
+- The baseline cannot search the web by design, so it abstains on the current-information questions E01 to E03. The agentic workflow answered two of the three (E01 and E03) from accepted, cited public sources and abstained on E02. These outcomes depend on live web results: in earlier runs the same questions ended in abstentions, so repeat runs are needed before calling the external path reliable.
+- The agentic workflow abstained on C03 ("Do I have to change my password every 90 days?"), a conflicting-documents question the baseline answered. The baseline also scored better on the conflict-handling metric. Conflicting documents remain a weak spot of the agentic path.
+- **Routing fix confirmed:** unnecessary external searches were 0 of 21. In the previous run (`20261118T062347Z-eb71dc`, before the fix) one undocumented company-specific question (I02) triggered a public search because a grader recommendation could override the classifier. Only the classifier's `external_current` or `both` intent can now allow a search. In that earlier run the two systems were identical on quality (21/24 each) and external fallback accuracy was 0/3.
+- Private-first routing was 20/21: one question skipped private retrieval because the classifier marked it out of scope. The rewrite-success figure (0/1) rests on a single question and says almost nothing.
 - Faithfulness comes from an LLM judge of the same model family as the generator, so treat it as a noisy signal. LLM confidence values are used as decision signals, not as calibrated probabilities.
+- **Reranker:** the optional cross-encoder reranker (`RERANK_ENABLED`) was off in this run. A matching run with it on is planned; until then no claim is made that it improves retrieval or reduces hallucinations.
 - Run it again (and with the full 52 questions, resuming across days if needed) before drawing conclusions.
 
 ## Testing
@@ -366,7 +368,7 @@ docker compose run --rm tests                      # unit tests inside the conta
 - **External results vary.** Tavily returns different pages over time, and official vendor pages are not always returned, so current-information questions can abstain on some runs. This is a safe failure, but it lowers the answer rate.
 - **LLM judgements vary.** The graders and the validator are LLM calls, so identical questions can be accepted on one run and rejected on another. Deterministic checks are used wherever possible, and the evaluation reports include the sample size.
 - **Free-tier limits.** Groq's free tier has per-minute and per-day token limits that make large evaluation runs slow and can interrupt them (runs are resumable).
-- **Known routing observations** from evaluation runs, not tuned on single cases: an undocumented company-specific question (I02 in the latest run, I03 in an earlier one) triggered a public search before abstaining (routing fixed afterwards, not yet re-measured: see Results); a borderline in-scope question was once classified as out of scope and skipped retrieval; a correct answer to a conflicting-documents question can fail closed when the validator judges the conflict notice insufficient; a superseded policy competes with the current one in retrieval because documents carry no current/superseded status.
+- **Known routing observations** from evaluation runs, not tuned on single cases: the unnecessary-search problem (I02, I03) was fixed and re-measured at 0/21; a borderline question can still be classified as out of scope and skip retrieval (one case in the latest run); a correct answer to a conflicting-documents question can fail closed or abstain (C03 in the latest run), and the baseline handled conflicts better; a superseded policy competes with the current one in retrieval because documents carry no current/superseded status.
 - **Plain-text first.** PDF and DOCX are supported, but the demo corpus is TXT, and PDF page numbers depend on the file's text layer (scanned PDFs are not OCR'd).
 - **No deployment.** There is no TLS, no secrets manager and no multi-user session handling.
 
