@@ -60,3 +60,9 @@ def test_documents_table_shows_admin_columns_only_when_present():
     adm = documents_table([{**base, "uploaded_by": "root", "error": "boom"}])[0]
     assert "uploaded by" not in emp and "error" not in emp and emp["updated"] == "2026-11-16 10:00:00"
     assert adm["uploaded by"] == "root" and adm["error"] == "boom"
+
+
+def test_documents_table_shows_the_version_status():
+    base = dict(document_name="a.txt", category="c", department="IT", access_level="internal", version=1, status="indexed", chunk_count=3, page_count=None, updated_at="2026-11-16T10:00:00+00:00")
+    rows = documents_table([base, {**base, "lifecycle": "superseded", "superseded_by": "b.txt"}, {**base, "lifecycle": "superseded"}])
+    assert [r["version status"] for r in rows] == ["Current", "Superseded by b.txt", "Superseded"]

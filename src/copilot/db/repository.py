@@ -9,7 +9,8 @@ from pydantic import BaseModel
 from copilot.db.connection import connect
 from copilot.utils import utc_now_iso
 
-DocStatus = Literal["pending", "processing", "indexed", "failed"]
+DocStatus = Literal["pending", "processing", "indexed", "failed"]  # indexing status
+Lifecycle = Literal["current", "superseded"]  # version status of the document itself
 
 
 class DocumentRecord(BaseModel):
@@ -31,6 +32,8 @@ class DocumentRecord(BaseModel):
     uploaded_at: str = ""
     updated_at: str = ""
     error: str | None = None
+    lifecycle: Lifecycle = "current"
+    superseded_by: str | None = None
 
 
 class IngestionRecord(BaseModel):
@@ -107,6 +110,14 @@ class DocumentRepository:
                     "WHERE document_id = ?",
                     (status, error, chunk_count, utc_now_iso(), document_id),
                 )
+
+    def set_lifecycle(self, document_id: str, lifecycle: Lifecycle, superseded_by: str | None) -> None:
+        """Record the version status of a document (no re-indexing)."""
+        with connect(self._db_path) as conn:
+            conn.execute(
+                "UPDATE documents SET lifecycle = ?, superseded_by = ?, updated_at = ? WHERE document_id = ?",
+                (lifecycle, superseded_by, utc_now_iso(), document_id),
+            )
 
     def list(
         self, access_levels: list[str] | None = None, status: DocStatus | None = None

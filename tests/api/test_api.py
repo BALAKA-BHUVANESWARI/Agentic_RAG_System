@@ -176,3 +176,21 @@ def test_openapi_documents_every_endpoint(api):
     paths = api(load_kb=False).client.get("/openapi.json").json()["paths"]
     for p in ("/chat", "/documents/upload", "/documents", "/documents/{document_id}", "/feedback", "/evaluation/run", "/audit/{request_id}", "/health"):
         assert p in paths
+
+
+def test_upload_form_can_mark_a_document_superseded_and_the_list_shows_it(api):
+    h = api(load_kb=False)
+    assert upload(h.client, ADM, lifecycle="superseded", superseded_by="Printer_Guide_v2.txt").status_code == 201
+    for headers in (ADM, EMP):  # the printer guide is internal, so employees may see its version status too
+        docs = {d["document_name"]: d for d in h.client.get("/documents", headers=headers).json()["documents"]}
+        assert (docs["Printer_Guide.txt"]["lifecycle"], docs["Printer_Guide.txt"]["superseded_by"]) == ("superseded", "Printer_Guide_v2.txt")
+    assert upload(h.client, ADM, name="x.txt", lifecycle="obsolete").status_code == 422
+    assert upload(h.client, EMP, name="y.txt", lifecycle="superseded").status_code == 403
+
+
+def test_document_list_marks_the_legacy_password_policy_superseded_and_the_rest_current(api):
+    h = api(load_kb=True)
+    docs = {d["document_name"]: d for d in h.client.get("/documents", headers=EMP).json()["documents"]}
+    legacy = docs.pop("Password_Policy_Legacy_2022.txt")
+    assert (legacy["lifecycle"], legacy["superseded_by"]) == ("superseded", "Password_Policy.txt")
+    assert {d["lifecycle"] for d in docs.values()} == {"current"}

@@ -52,3 +52,12 @@ def test_unreachable_backend_gives_a_helpful_message():
     with pytest.raises(ApiError) as exc:
         c.health()
     assert exc.value.status_code == 0 and "run_api.py" in exc.value.detail
+
+
+def test_upload_with_version_status_through_the_ui_client(api):
+    ns = api(load_kb=False)
+    admin = client_for(ns, "admin", "root")
+    ok = admin.upload_document("Printer_Guide.txt", NEW_DOC, lifecycle="superseded", superseded_by="Printer_Guide_v2.txt")
+    assert ok["status"] == "indexed"
+    doc = admin.list_documents()["documents"][0]
+    assert (doc["lifecycle"], doc["superseded_by"]) == ("superseded", "Printer_Guide_v2.txt")

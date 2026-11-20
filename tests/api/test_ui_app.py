@@ -72,3 +72,15 @@ def test_admin_page_lists_all_documents_and_is_hidden_from_employees(app, api):
     assert not at.exception
     rows = at.dataframe[0].value
     assert len(rows) == 11 and "Service_Desk_Runbook.txt" in set(rows["name"])
+
+
+def test_admin_page_shows_the_superseded_policy_and_the_version_status_field(app, api):
+    ns = api(load_kb=True)
+    at = app(ns).run()
+    at.sidebar.selectbox(key="role").select("admin").run()
+    at.sidebar.radio(key="page").set_value("Admin").run()
+    assert not at.exception
+    rows = at.dataframe[0].value
+    status = dict(zip(rows["name"], rows["version status"]))
+    assert status["Password_Policy_Legacy_2022.txt"] == "Superseded by Password_Policy.txt" and status["Password_Policy.txt"] == "Current"
+    assert "Version status" in [s.label for s in at.selectbox]

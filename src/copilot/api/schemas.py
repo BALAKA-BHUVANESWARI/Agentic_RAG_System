@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 from copilot.audit.logger import AuditRecord
 
 AccessLevelName = Literal["public", "internal", "restricted"]
+LifecycleName = Literal["current", "superseded"]
 
 
 class ErrorResponse(BaseModel):
@@ -100,6 +101,8 @@ class DocumentOut(BaseModel):
     file_type: str | None = None
     page_count: int | None = None
     chunk_count: int = 0
+    lifecycle: LifecycleName = Field(default="current", description="Version status: 'superseded' = replaced by a newer document.")
+    superseded_by: str | None = Field(default=None, description="Name of the replacing document, when known.")
     uploaded_at: str = ""
     updated_at: str = ""
     uploaded_by: str | None = Field(default=None, description="Admins only.")

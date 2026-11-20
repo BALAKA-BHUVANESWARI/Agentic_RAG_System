@@ -130,3 +130,29 @@ def test_chunks_carry_the_document_status(settings):
         segments=build_segments(loaded), metadata=meta, settings=settings,
     )
     assert chunks and all((c.status, c.superseded_by) == ("superseded", "New.txt") for c in chunks)
+
+
+# ---- upload-form overrides of the version status ---------------------------------------
+_SUPERSEDED_HEADER = HEADER.replace("Version: 3\n", "Version: 3\nStatus: superseded by Old.txt\n")
+
+
+def test_form_status_wins_over_the_header_and_names_are_cleaned():
+    meta, _ = extract_metadata(_txt(_SUPERSEDED_HEADER), lifecycle="current")
+    assert (meta.status, meta.superseded_by) == ("current", None)
+    meta, _ = extract_metadata(_txt(HEADER), lifecycle="superseded", superseded_by="  New   Guide.txt ")
+    assert (meta.status, meta.superseded_by) == ("superseded", "New Guide.txt")
+
+
+def test_form_replacement_name_beats_the_header_name_and_is_otherwise_inherited():
+    assert extract_metadata(_txt(_SUPERSEDED_HEADER), superseded_by="Other.txt")[0].superseded_by == "Other.txt"
+    assert extract_metadata(_txt(_SUPERSEDED_HEADER), lifecycle="superseded")[0].superseded_by == "Old.txt"
+
+
+def test_replacement_name_is_ignored_for_a_current_document():
+    meta, _ = extract_metadata(_txt(HEADER), superseded_by="Ignored.txt")
+    assert (meta.status, meta.superseded_by) == ("current", None)
+
+
+def test_unknown_form_status_is_rejected():
+    with pytest.raises(ValidationFailed):
+        extract_metadata(_txt(HEADER), lifecycle="obsolete")

@@ -94,11 +94,19 @@ def trace_sections(r: dict) -> list[TraceSection]:
     return out
 
 
+def version_status_text(doc: dict) -> str:
+    """'Current', 'Superseded' or 'Superseded by <document>' (the lifecycle fields may be missing in older responses)."""
+    if doc.get("lifecycle") != "superseded":
+        return "Current"
+    return f"Superseded by {doc['superseded_by']}" if doc.get("superseded_by") else "Superseded"
+
+
 def documents_table(docs: list[dict]) -> list[dict]:
     """Rows for the document table. Admin-only columns appear only when the API supplied them."""
     rows = []
     for d in docs:
         row = {"name": d["document_name"], "category": d["category"], "department": d["department"], "access": d["access_level"], "version": d["version"],
+               "version status": version_status_text(d),
                "status": d["status"], "chunks": d["chunk_count"], "pages": d.get("page_count"), "updated": d.get("updated_at", "")[:19].replace("T", " ")}
         if d.get("uploaded_by") is not None:
             row["uploaded by"] = d["uploaded_by"]

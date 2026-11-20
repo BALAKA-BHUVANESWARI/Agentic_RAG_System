@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, Response, UploadFile, status
 
-from copilot.api.schemas import AccessLevelName, DeleteResponse, DocumentListResponse, DocumentOut, IngestionOut
+from copilot.api.schemas import AccessLevelName, DeleteResponse, DocumentListResponse, DocumentOut, IngestionOut, LifecycleName
 from copilot.api.security import Principal, get_principal, require_admin
 from copilot.api.services import Services, get_services
 from copilot.auth.access import allowed_access_levels
@@ -26,6 +26,8 @@ def upload_document(
     category: str | None = Form(default=None, max_length=64),
     department: str | None = Form(default=None, max_length=64),
     access_level: AccessLevelName | None = Form(default=None),
+    lifecycle: LifecycleName | None = Form(default=None, description="current or superseded; omit to use the document header"),
+    superseded_by: str | None = Form(default=None, max_length=120, description="Replacing document, used when superseded"),
     principal: Principal = Depends(require_admin),
     svc: Services = Depends(get_services),
 ) -> IngestionOut:
@@ -36,6 +38,7 @@ def upload_document(
         raise HTTPException(413, f"File exceeds {svc.settings.max_upload_mb} MB.")
     result = svc.pipeline.ingest_bytes(
         file.filename or "", data, uploaded_by=principal.user_id, category=category, department=department, access_level=access_level,
+        lifecycle=lifecycle, superseded_by=superseded_by,
     )
     out = IngestionOut(**result.model_dump(include=set(IngestionOut.model_fields)))
     response.status_code = {"indexed": status.HTTP_201_CREATED, "skipped": status.HTTP_200_OK}.get(result.status, status.HTTP_400_BAD_REQUEST)

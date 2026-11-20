@@ -62,6 +62,8 @@ class IngestionPipeline:
         category: str | None = None,
         department: str | None = None,
         access_level: str | None = None,
+        lifecycle: str | None = None,
+        superseded_by: str | None = None,
         force: bool = False,
     ) -> IngestionResult:
         """Ingest one file. Never raises for expected problems; returns a result instead."""
@@ -80,7 +82,8 @@ class IngestionPipeline:
                 update={"pages": [PageText(page_number=p.page_number, text=clean_text(p.text)) for p in loaded.pages]}
             )
             metadata, loaded = extract_metadata(
-                loaded, category=category, department=department, access_level=access_level
+                loaded, category=category, department=department, access_level=access_level,
+                lifecycle=lifecycle, superseded_by=superseded_by,
             )
             segments = build_segments(loaded)
             if not segments:
@@ -101,9 +104,15 @@ class IngestionPipeline:
         # ---- duplicate detection ----
         if not force:
             if existing and existing.content_hash == content_hash and existing.status == "indexed":
+                message = "Unchanged: identical content is already indexed."
+                if (existing.lifecycle, existing.superseded_by) != (metadata.status, metadata.superseded_by):
+                    # The content hash already covers the status, so this only happens for rows created before the
+                    # lifecycle columns existed: bring the record in line without re-indexing.
+                    self._repo.set_lifecycle(document_id, metadata.status, metadata.superseded_by)
+                    message += " The recorded version status was updated."
                 return IngestionResult(
                     status="skipped", document_name=name, document_id=document_id, version=existing.version,
-                    chunk_count=existing.chunk_count, message="Unchanged: identical content is already indexed.",
+                    chunk_count=existing.chunk_count, message=message,
                 )
             duplicate = self._repo.get_by_hash(content_hash)
             if duplicate and duplicate.document_id != document_id:
@@ -122,6 +131,7 @@ class IngestionPipeline:
                 category=metadata.category, department=metadata.department, access_level=metadata.access_level,
                 version=version, status="processing", file_type=file_type, file_size_bytes=len(data),
                 page_count=loaded.page_count, chunk_count=0, uploaded_by=uploaded_by,
+                lifecycle=metadata.status, superseded_by=metadata.superseded_by,
             )
         )
         record_id = self._repo.add_ingestion_record(document_id, version, content_hash)
@@ -183,7 +193,8 @@ class IngestionPipeline:
             return IngestionResult(status="failed", document_name=record.document_name, document_id=document_id, message=msg, error=msg)
         return self.ingest_bytes(
             record.document_name, source.read_bytes(), uploaded_by=record.uploaded_by or "system",
-            category=record.category, department=record.department, access_level=record.access_level, force=True,
+            category=record.category, department=record.department, access_level=record.access_level,
+            lifecycle=record.lifecycle, superseded_by=record.superseded_by, force=True,
         )
 
     def delete_document(self, document_id: str) -> bool:

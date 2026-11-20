@@ -102,7 +102,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/audit/<request_id>" -Headers $h | 
 
    Expected: question, intent, retrieved document and chunk ids, rewritten query, grading, external flag and URLs, final answer, citations, validation result, execution time and the feedback you gave. No API keys.
 3. Switch the sidebar role to `admin`, open the **Admin** page:
-   - **Documents** tab: 11 documents, including the two restricted ones. Upload a small `.txt`, check its status becomes `indexed`, ask a question it answers, then delete it.
+   - **Documents** tab: 11 documents, including the two restricted ones. The `version status` column shows `Superseded by Password_Policy.txt` for `Password_Policy_Legacy_2022.txt` and `Current` for the rest (if the legacy policy shows `Current`, run `python scripts\ingest_kb.py` once; it repairs the record). Upload a small `.txt`, check its status becomes `indexed`, ask a question it answers, then delete it.
    - **Audit** tab: the requests above are listed.
    - **Evaluation** tab: past runs, the baseline-vs-agentic dashboard, failed cases.
 

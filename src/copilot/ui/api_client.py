@@ -71,9 +71,16 @@ class CopilotClient:
         """GET /documents."""
         return self._request("GET", "/documents", params={"status": status} if status else None)
 
-    def upload_document(self, filename: str, data: bytes, *, category: str | None = None, department: str | None = None, access_level: str | None = None) -> dict:
-        """POST /documents/upload. A rejected file returns its IngestionOut body (status 'failed') instead of raising."""
-        form = {k: v for k, v in {"category": category, "department": department, "access_level": access_level}.items() if v}
+    def upload_document(
+        self, filename: str, data: bytes, *, category: str | None = None, department: str | None = None,
+        access_level: str | None = None, lifecycle: str | None = None, superseded_by: str | None = None,
+    ) -> dict:
+        """POST /documents/upload. A rejected file returns its IngestionOut body (status 'failed') instead of raising.
+
+        ``lifecycle`` is ``current`` or ``superseded``; leave it out to use the document header.
+        """
+        fields = {"category": category, "department": department, "access_level": access_level, "lifecycle": lifecycle, "superseded_by": superseded_by}
+        form = {k: v for k, v in fields.items() if v}
         return self._request("POST", "/documents/upload", accept=(400,), files={"file": (filename, data)}, data=form)
 
     def delete_document(self, document_id: str) -> dict:

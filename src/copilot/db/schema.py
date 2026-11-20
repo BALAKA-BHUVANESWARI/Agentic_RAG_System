@@ -10,7 +10,7 @@ from pathlib import Path
 
 from copilot.db.connection import connect
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2  # 2: documents.lifecycle and documents.superseded_by
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_meta (
@@ -37,7 +37,10 @@ CREATE TABLE IF NOT EXISTS documents (
     uploaded_by     TEXT,
     uploaded_at     TEXT NOT NULL,
     updated_at      TEXT NOT NULL,
-    error           TEXT
+    error           TEXT,
+    -- Version status of the document itself (not the indexing status above): 'superseded' = replaced by a newer document.
+    lifecycle       TEXT NOT NULL DEFAULT 'current' CHECK (lifecycle IN ('current', 'superseded')),
+    superseded_by   TEXT
 );
 
 -- History of every ingestion attempt (new versions, re-indexing, failures).
@@ -115,10 +118,26 @@ EXPECTED_TABLES = frozenset(
 )
 
 
+# Columns added after schema version 1. CREATE TABLE IF NOT EXISTS leaves an older table untouched, so they are added here.
+_DOCUMENT_COLUMNS_ADDED_IN_V2 = {
+    "lifecycle": "TEXT NOT NULL DEFAULT 'current' CHECK (lifecycle IN ('current', 'superseded'))",
+    "superseded_by": "TEXT",
+}
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Bring a database created by an older version up to date (idempotent; existing rows keep their data)."""
+    present = {row["name"] for row in conn.execute("PRAGMA table_info(documents)")}
+    for name, definition in _DOCUMENT_COLUMNS_ADDED_IN_V2.items():  # names and definitions are constants above
+        if name not in present:
+            conn.execute(f"ALTER TABLE documents ADD COLUMN {name} {definition}")
+
+
 def init_db(db_path: Path | str) -> None:
-    """Create all tables/indexes if missing and record the schema version."""
+    """Create all tables/indexes if missing, migrate older databases and record the schema version."""
     with connect(db_path) as conn:
         conn.executescript(SCHEMA_SQL)
+        _migrate(conn)
         conn.execute(
             "INSERT INTO schema_meta(key, value) VALUES ('schema_version', ?) "
             "ON CONFLICT(key) DO UPDATE SET value = excluded.value",

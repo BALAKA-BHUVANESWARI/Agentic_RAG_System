@@ -88,3 +88,47 @@ def test_rollback_on_error(db):
             raise RuntimeError("boom")
     with connect(db) as conn:
         assert conn.execute("SELECT COUNT(*) AS n FROM documents").fetchone()["n"] == 0
+
+
+# ---- version status columns (schema version 2) -----------------------------------------
+def _document_columns(path):
+    with connect(path) as conn:
+        return {r["name"] for r in conn.execute("PRAGMA table_info(documents)")}
+
+
+def test_new_database_has_version_status_columns_and_rejects_unknown_values(db):
+    assert {"lifecycle", "superseded_by"} <= _document_columns(db)
+    with connect(db) as conn:
+        _insert_doc(conn)
+        assert tuple(conn.execute("SELECT lifecycle, superseded_by FROM documents").fetchone()) == ("current", None)
+    with pytest.raises(sqlite3.IntegrityError):
+        with connect(db) as conn:
+            conn.execute("UPDATE documents SET lifecycle = 'obsolete'")
+
+
+_OLD_DOCUMENTS_TABLE = """
+CREATE TABLE documents (
+    document_id TEXT PRIMARY KEY, document_name TEXT NOT NULL UNIQUE, content_hash TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'general', department TEXT NOT NULL DEFAULT 'IT',
+    access_level TEXT NOT NULL DEFAULT 'internal' CHECK (access_level IN ('public', 'internal', 'restricted')),
+    version INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'indexed', 'failed')),
+    file_type TEXT, file_size_bytes INTEGER, page_count INTEGER, chunk_count INTEGER NOT NULL DEFAULT 0,
+    uploaded_by TEXT, uploaded_at TEXT NOT NULL, updated_at TEXT NOT NULL, error TEXT
+);
+"""
+
+
+def test_database_from_before_version_status_is_migrated_without_losing_rows(tmp_path):
+    path = tmp_path / "old.db"
+    with connect(path) as conn:
+        conn.executescript(_OLD_DOCUMENTS_TABLE)
+        _insert_doc(conn, document_id="old1", document_name="old.txt")
+    assert "lifecycle" not in _document_columns(path)
+    init_db(path)
+    init_db(path)  # running it again is harmless
+    assert {"lifecycle", "superseded_by"} <= _document_columns(path)
+    with connect(path) as conn:
+        row = conn.execute("SELECT document_name, lifecycle, superseded_by FROM documents").fetchone()
+    assert (row["document_name"], row["lifecycle"], row["superseded_by"]) == ("old.txt", "current", None)
+    assert get_schema_version(path) == SCHEMA_VERSION == 2

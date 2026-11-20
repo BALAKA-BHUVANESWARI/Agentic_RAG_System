@@ -195,3 +195,32 @@ def test_marking_a_document_superseded_is_a_new_version_not_a_skipped_duplicate(
     assert metadata and all((md["status"], md["superseded_by"]) == ("superseded", "New_Guide.txt") for md in metadata)
     assert all(i.startswith(f"{make_document_id('guide.txt')}:v2:") for i in _ids(index))  # old vectors removed
     assert pipeline.ingest_bytes("guide.txt", superseded.encode()).status == "skipped"
+
+
+# ---- version status in the document record ---------------------------------------------
+_MARKED = DOC.replace("Access-Level: internal\n", "Access-Level: internal\nStatus: superseded by New_Guide.txt\n")
+
+
+def test_record_stores_the_version_status_from_the_header_and_the_form_wins(pipeline, repo):
+    r = pipeline.ingest_bytes("guide.txt", _MARKED.encode())
+    rec = repo.get(r.document_id)
+    assert (rec.lifecycle, rec.superseded_by) == ("superseded", "New_Guide.txt")
+    r2 = pipeline.ingest_bytes("guide.txt", _MARKED.encode(), lifecycle="current")
+    rec = repo.get(r2.document_id)
+    assert (r2.status, r2.version) == ("indexed", 2) and (rec.lifecycle, rec.superseded_by) == ("current", None)
+
+
+def test_reindex_keeps_the_version_status_set_at_upload(pipeline, repo, index):
+    r = pipeline.ingest_bytes("guide.txt", DOC.encode(), lifecycle="superseded", superseded_by="New_Guide.txt")
+    again = pipeline.reindex(r.document_id)
+    rec = repo.get(r.document_id)
+    assert again.status == "indexed" and (rec.lifecycle, rec.superseded_by) == ("superseded", "New_Guide.txt")
+    assert all((md["status"], md["superseded_by"]) == ("superseded", "New_Guide.txt") for _, md in index.data["kb"].values())
+
+
+def test_unchanged_reupload_repairs_a_record_from_before_the_version_status_columns(pipeline, repo):
+    r = pipeline.ingest_bytes("guide.txt", _MARKED.encode())
+    repo.set_lifecycle(r.document_id, "current", None)  # how a migrated database looks until the next ingest
+    again = pipeline.ingest_bytes("guide.txt", _MARKED.encode())
+    assert again.status == "skipped" and "version status was updated" in again.message
+    assert (repo.get(r.document_id).lifecycle, repo.get(r.document_id).superseded_by) == ("superseded", "New_Guide.txt")

@@ -16,6 +16,7 @@ DISCLAIMER_PREFIX = "SYNTHETIC DEMO DOCUMENT"
 VALID_ACCESS_LEVELS = ("public", "internal", "restricted")
 _KNOWN_KEYS = {"title", "category", "department", "access-level", "version", "last-reviewed", "status"}
 # "Status: current" or "Status: superseded [by <document>]". Any other value is not a status line.
+_MAX_SUPERSEDED_BY = 120
 _STATUS_VALUE = re.compile(r"^(current|superseded)(?:\s+by\s+(.+))?$", re.IGNORECASE)
 _HEADER_LINE = re.compile(r"^([A-Za-z][A-Za-z _-]{1,30}):\s*(.+)$")
 
@@ -74,8 +75,14 @@ def extract_metadata(
     category: str | None = None,
     department: str | None = None,
     access_level: str | None = None,
+    lifecycle: str | None = None,
+    superseded_by: str | None = None,
 ) -> tuple[DocumentMetadata, LoadedDocument]:
-    """Resolve metadata and return it with the document stripped of its header block."""
+    """Resolve metadata and return it with the document stripped of its header block.
+
+    ``lifecycle`` (``current`` or ``superseded``) and ``superseded_by`` come from the admin upload form and win over
+    the header ``Status:`` line, like the other explicit arguments. ``None`` means "use the header".
+    """
     header: dict[str, str] = {}
     pages = list(loaded.pages)
     if pages:
@@ -87,7 +94,13 @@ def extract_metadata(
         raise ValidationFailed(
             f"Invalid access level '{level}'. Allowed: {', '.join(VALID_ACCESS_LEVELS)}."
         )
-    status, superseded_by = parse_status(header.get("status"))
+    status, header_by = parse_status(header.get("status"))
+    if lifecycle is not None:
+        status = lifecycle.strip().lower()
+        if status not in ("current", "superseded"):
+            raise ValidationFailed(f"Invalid version status '{lifecycle}'. Allowed: current, superseded.")
+    replacement = " ".join((superseded_by or "").split())[:_MAX_SUPERSEDED_BY] or header_by
+    superseded_by = replacement if status == "superseded" else None
     metadata = DocumentMetadata(
         title=header.get("title") or _humanize(loaded.file_name),
         category=(category or header.get("category") or "general").strip().lower(),
