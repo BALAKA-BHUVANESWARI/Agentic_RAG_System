@@ -229,6 +229,33 @@ def test_reranker_fetches_a_larger_candidate_pool(make_settings, tmp_path, embed
     assert seen["k"] == 15
 
 
+def test_rerank_text_adds_title_and_section_like_the_embedder():
+    from copilot.vectorstore.reranker import rerank_text
+
+    base = _tc("a", "internal", 0.9, "1. Open a P2 ticket.")
+    assert rerank_text(base.model_copy(update={"title": "Admin Recovery", "section": "3. Recovering a locked account"})) == (
+        "Admin Recovery | 3. Recovering a locked account\n1. Open a P2 ticket."
+    )
+    assert rerank_text(base.model_copy(update={"title": "Admin Recovery"})) == "Admin Recovery\n1. Open a P2 ticket."
+
+
+def test_rerank_text_is_the_plain_text_without_title_or_section():
+    from copilot.vectorstore.reranker import rerank_text
+
+    assert rerank_text(_tc("a", "internal", 0.9, "vpn only")) == "vpn only"
+
+
+def test_reranker_scores_the_heading_context_not_just_the_chunk_text():
+    from copilot.vectorstore.reranker import CrossEncoderReranker
+
+    model = _FakeCrossEncoder()
+    chunk = _tc("a", "internal", 0.9, "1. Open a P2 ticket.").model_copy(update={"title": "Admin Recovery", "section": "Recovering a locked account"})
+    other = _tc("b", "internal", 0.8, "parking rules")
+    ordered, reranked = CrossEncoderReranker("x", model=model).rerank("locked account recovery", [other, chunk])
+    assert reranked is True and [c.chunk_id for c in ordered] == ["a", "b"]  # only the heading contains "locked", "account"
+    assert model.calls[0][1][1].startswith("Admin Recovery | Recovering a locked account\n")
+
+
 def test_retriever_without_reranker_is_unchanged_and_off_by_default(settings, embedder):
     assert settings.rerank_enabled is False
     store = _StubStore([_tc("a", "internal", 0.9, "x"), _tc("b", "internal", 0.8, "y")])

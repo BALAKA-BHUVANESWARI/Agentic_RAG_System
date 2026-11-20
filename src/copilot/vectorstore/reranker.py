@@ -17,6 +17,17 @@ from copilot.vectorstore.models import RetrievedChunk
 log = get_logger(__name__)
 
 
+def rerank_text(chunk: RetrievedChunk) -> str:
+    """Text the cross-encoder scores: the same ``title | section`` context the embedder saw, then the chunk text.
+
+    Section headings are often the strongest relevance signal (e.g. "Recovering a locked administrator account"),
+    so scoring the bare chunk text would give the reranker less information than the bi-encoder it reorders.
+    Chunks with no title or section are scored on their text alone.
+    """
+    prefix = chunk.title if not chunk.section else f"{chunk.title} | {chunk.section}" if chunk.title else chunk.section
+    return f"{prefix}\n{chunk.text}" if prefix else chunk.text
+
+
 class CrossEncoderReranker:
     """Lazy wrapper around ``sentence_transformers.CrossEncoder``."""
 
@@ -40,7 +51,7 @@ class CrossEncoderReranker:
         if len(chunks) < 2:
             return list(chunks), False
         try:
-            scores = self._get_model().predict([(query, c.text) for c in chunks])
+            scores = self._get_model().predict([(query, rerank_text(c)) for c in chunks])
             scored = [c.model_copy(update={"rerank_score": float(s)}) for c, s in zip(chunks, scores)]
         except Exception as exc:  # noqa: BLE001 - never let the optional reranker break retrieval
             log.warning("Reranking failed; keeping vector order", extra={"error": type(exc).__name__})

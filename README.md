@@ -113,7 +113,8 @@ it-support-copilot/
 │   └── sqlite/                app.db (git-ignored)
 ├── frontend/streamlit_app.py  Streamlit entry point
 ├── scripts/                   init_db, check_env, check_groq, ingest_kb, search_kb,
-│                              ask_baseline, ask_agent, run_api, run_eval
+│                              ask_baseline, ask_agent, run_api, run_eval,
+│                              eval_rerank_ab
 ├── src/copilot/
 │   ├── config.py, logging_config.py, retry.py, utils.py
 │   ├── auth/                  demo roles and access levels
@@ -304,6 +305,7 @@ python scripts\run_eval.py --per-category 1 --no-judge --delay 10  # small smoke
 python scripts\run_eval.py --per-category 3 --delay 5              # larger run with the judge
 python scripts\run_eval.py --list-runs
 python scripts\run_eval.py --resume <run_id>                       # continue an interrupted or stopped run
+python scripts\eval_rerank_ab.py                                  # reranker off vs on, retrieval only (no LLM or search calls, no tokens)
 ```
 
 Press Ctrl+C once to stop after the current case; the run stays resumable. A circuit breaker stops a run after `EVAL_MAX_CONSECUTIVE_ERRORS` infrastructure errors in a row (for example an exhausted daily quota). Outputs go to `data/eval/results/<run_id>/` (`summary.json`, `cases.csv`, `metrics.csv`, `cases.jsonl`, `retrieval.jsonl`, `config.json`) and run metadata to the SQLite `eval_runs` table. The Streamlit **Admin → Evaluation** tab shows the dashboard: retrieval, answer, routing and external-search metrics, latency and cost, failed cases, and baseline vs agentic.
@@ -344,7 +346,7 @@ Retrieval (12 questions with expected documents): document recall@5 1.00, docume
 - **Routing fix confirmed:** unnecessary external searches were 0 of 21. In the previous run (`20261118T062347Z-eb71dc`, before the fix) one undocumented company-specific question (I02) triggered a public search because a grader recommendation could override the classifier. Only the classifier's `external_current` or `both` intent can now allow a search. In that earlier run the two systems were identical on quality (21/24 each) and external fallback accuracy was 0/3.
 - Private-first routing was 20/21: one question skipped private retrieval because the classifier marked it out of scope. The rewrite-success figure (0/1) rests on a single question and says almost nothing.
 - Faithfulness comes from an LLM judge of the same model family as the generator, so treat it as a noisy signal. LLM confidence values are used as decision signals, not as calibrated probabilities.
-- **Reranker:** the optional cross-encoder reranker (`RERANK_ENABLED`) was off in this run. A matching run with it on is planned; until then no claim is made that it improves retrieval or reduces hallucinations.
+- **Reranker (evaluated, not enabled):** the optional cross-encoder reranker (`RERANK_ENABLED`, default off) was off in this run. A separate retrieval-only comparison (`scripts\eval_rerank_ab.py`, no LLM or search calls, the 32 questions that have expected documents, 2026-11-20) found no benefit on this corpus: chunk MRR was 0.932 without the reranker, 0.930 with `ms-marco-MiniLM-L-6-v2` and 0.892 with `bge-reranker-base`, and document recall@5 was 1.000 in every case. An earlier version scored each chunk without its section heading, which the embedder does see, and chunk MRR fell to 0.822; scoring `title | section` plus the text fixed that. It still lowered MRR on vague, symptom-style questions (`needs_rewriting`: 0.833 to 0.626). With 32 questions the differences are within noise, the metrics rank the original question rather than the rewritten one, and answer quality with the reranker was not measured, so no claim is made that it improves retrieval or reduces hallucinations. It stays off.
 - Run it again (and with the full 52 questions, resuming across days if needed) before drawing conclusions.
 
 ## Testing
