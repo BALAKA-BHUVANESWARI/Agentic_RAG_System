@@ -11,6 +11,16 @@ A guided walkthrough that proves the whole system works, using the two reference
 - **Groq free tier:** `openai/gpt-oss-120b` allows 200,000 tokens per day and 8,000 per minute. This whole demo costs roughly 15,000 to 25,000 tokens. Do not run it on the same day as a full evaluation run unless the daily budget allows both; a `429 ... tokens per day` error means the budget is used up and the demo must wait.
 - Run one thing at a time (shared rate limits).
 
+## 0a. Pre-flight checklist (do this first; most steps cost no tokens)
+
+1. **Confirm the knowledge base is exactly the 11 core documents** (Admin > Documents). Extra or demo documents change the answers and make runs incomparable.
+2. **Free checks** (no Groq tokens): `python scripts\run_eval.py --validate-only`, and `pytest -q`.
+3. **Check Groq has budget before the first question.** The daily limit is per organization and model and refills gradually (roughly 8,000 tokens per hour), so a new API key does not help. `python scripts\check_groq.py` makes one small call: if it returns a `429`, wait and try again later instead of starting the demo.
+4. **Token expectation.** The earlier estimate for this demo is about 15,000 to 25,000 tokens. For comparison, the recorded evaluation run used about 4,600 tokens per agentic question (109,792 tokens over 24 questions), so 10 questions would be near 46,000 in the worst case. Either way it fits in one day's 200,000, but not alongside an evaluation run.
+5. **Order that wastes the least if the budget runs out:** health check (free) -> A (VPN) -> B (Teams) -> S1 and S3 (cheap) -> S2, S4, S5, S6 -> section 5 (audit and feedback, free). If a `429` stops you, note which step you reached and continue on another day.
+6. **Do not run anything else that uses Groq** while the demo runs (no evaluation, no second browser tab asking questions).
+7. **What to keep for the write-up:** the Request ID of A and B (shown under the trace), the `--verbose` output with any key removed, and the filled-in tables. The README screenshots already exist in `docs/screenshots/`, so retake them only if the UI changed.
+
 ## 1. Start the system
 
 **Virtualenv** (two terminals, venv active, from `it-support-copilot/`):

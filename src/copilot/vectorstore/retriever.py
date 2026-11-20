@@ -10,9 +10,31 @@ from typing import Any
 from copilot.auth.access import allowed_access_levels, resolve_role
 from copilot.config import Settings, get_settings
 from copilot.logging_config import get_logger
-from copilot.vectorstore.models import RetrievalFilters, RetrievalResult
+from copilot.vectorstore.models import RetrievalFilters, RetrievalResult, RetrievedChunk
 
 log = get_logger(__name__)
+
+
+def limit_per_document(chunks: list[RetrievedChunk], cap: int, k: int) -> list[RetrievedChunk]:
+    """Pick up to ``k`` chunks in rank order with at most ``cap`` per document, then refill unused slots.
+
+    A SOFT cap: when too few other documents are available, the best chunks over the cap fill the remaining
+    slots, so a single-document answer is never cut short. The returned list keeps the original rank order.
+    """
+    selected: list[int] = []
+    over_cap: list[int] = []
+    counts: dict[str, int] = {}
+    for i, chunk in enumerate(chunks):
+        if len(selected) >= k:
+            break
+        if counts.get(chunk.document_id, 0) < cap:
+            selected.append(i)
+            counts[chunk.document_id] = counts.get(chunk.document_id, 0) + 1
+        else:
+            over_cap.append(i)
+    if len(selected) < k:
+        selected += over_cap[: k - len(selected)]
+    return [chunks[i] for i in sorted(selected)]
 
 
 class Retriever:
@@ -68,7 +90,8 @@ class Retriever:
 
         filters = filters or RetrievalFilters()
         vector = self._embedder.embed_query(query)
-        fetch_k = max(k, s.rerank_candidates) if self._reranker is not None else k
+        cap = s.retrieval_max_chunks_per_doc
+        fetch_k = max(k, s.rerank_candidates) if (self._reranker is not None or cap) else k
         raw = self._store.query(
             vector,
             fetch_k,
@@ -87,7 +110,9 @@ class Retriever:
         reranked = False
         if self._reranker is not None and len(kept) > 1:
             kept, reranked = self._reranker.rerank(query, kept)
-        if self._reranker is not None:
+        if cap:
+            kept = limit_per_document(kept, cap, k)
+        elif self._reranker is not None:
             kept = kept[:k]
         return RetrievalResult(
             query=query,

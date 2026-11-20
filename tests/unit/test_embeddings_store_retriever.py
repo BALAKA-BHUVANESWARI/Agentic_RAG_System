@@ -256,6 +256,71 @@ def test_reranker_scores_the_heading_context_not_just_the_chunk_text():
     assert model.calls[0][1][1].startswith("Admin Recovery | Recovering a locked account\n")
 
 
+# ---- Per-document chunk cap (added 2026-11-20) ---------------------------------------
+def _dc(doc: str, n: int, score: float) -> RetrievedChunk:
+    return RetrievedChunk(chunk_id=f"{doc}:{n}", document_id=doc, document_name=f"{doc}.txt", access_level="internal", score=score)
+
+
+class _RecordingStore(_StubStore):
+    def query(self, vector, top_k, access_levels, **kwargs):
+        self.last_top_k = top_k
+        return super().query(vector, top_k, access_levels, **kwargs)
+
+
+def test_chunk_cap_is_off_by_default(settings):
+    assert settings.retrieval_max_chunks_per_doc is None
+
+
+def test_chunk_cap_lets_a_second_document_into_the_top_k(make_settings, tmp_path, embedder):
+    s = make_settings(sqlite_path=tmp_path / "a.db", retrieval_min_score=0.0, retrieval_max_chunks_per_doc=2)
+    store = _StubStore([_dc("a", i, 0.9 - 0.05 * i) for i in range(5)] + [_dc("b", 0, 0.5), _dc("b", 1, 0.4)])
+    res = Retriever(s, embedder=embedder, store=store).retrieve("q", "employee", top_k=5)
+    assert [c.chunk_id for c in res.chunks] == ["a:0", "a:1", "a:2", "b:0", "b:1"]  # 2 + 2 within the cap, 1 refill; rank order kept
+
+
+def test_chunk_cap_is_enforced_when_other_documents_are_available(make_settings, tmp_path, embedder):
+    s = make_settings(sqlite_path=tmp_path / "a.db", retrieval_min_score=0.0, retrieval_max_chunks_per_doc=2)
+    store = _StubStore([_dc("a", i, 0.9 - 0.05 * i) for i in range(5)] + [_dc("b", 0, 0.5), _dc("c", 0, 0.4), _dc("d", 0, 0.3)])
+    res = Retriever(s, embedder=embedder, store=store).retrieve("q", "employee", top_k=5)
+    assert [c.chunk_id for c in res.chunks] == ["a:0", "a:1", "b:0", "c:0", "d:0"]
+
+
+def test_chunk_cap_never_returns_fewer_than_top_k_when_only_one_document_matches(make_settings, tmp_path, embedder):
+    s = make_settings(sqlite_path=tmp_path / "a.db", retrieval_min_score=0.0, retrieval_max_chunks_per_doc=1)
+    store = _StubStore([_dc("a", i, 0.9 - 0.05 * i) for i in range(4)])
+    res = Retriever(s, embedder=embedder, store=store).retrieve("q", "employee", top_k=3)
+    assert [c.chunk_id for c in res.chunks] == ["a:0", "a:1", "a:2"]
+
+
+def test_chunk_cap_fetches_a_larger_candidate_pool_and_stays_off_otherwise(make_settings, tmp_path, embedder):
+    on = make_settings(sqlite_path=tmp_path / "a.db", retrieval_max_chunks_per_doc=2, rerank_candidates=15)
+    store = _RecordingStore([_dc("a", 0, 0.9)])
+    Retriever(on, embedder=embedder, store=store).retrieve("q", "employee", top_k=5)
+    assert store.last_top_k == 15
+    off = make_settings(sqlite_path=tmp_path / "b.db", rerank_candidates=15)
+    store = _RecordingStore([_dc("a", 0, 0.9)])
+    Retriever(off, embedder=embedder, store=store).retrieve("q", "employee", top_k=5)
+    assert store.last_top_k == 5
+
+
+def test_chunk_cap_still_applies_access_control(make_settings, tmp_path, embedder):
+    s = make_settings(sqlite_path=tmp_path / "a.db", retrieval_min_score=0.0, retrieval_max_chunks_per_doc=1)
+    secret = RetrievedChunk(chunk_id="s:0", document_id="s", document_name="s.txt", access_level="restricted", score=0.99)
+    store = _StubStore([secret, _dc("a", 0, 0.8), _dc("a", 1, 0.7), _dc("b", 0, 0.6)])
+    res = Retriever(s, embedder=embedder, store=store).retrieve("q", "employee", top_k=3)
+    assert [c.chunk_id for c in res.chunks] == ["a:0", "a:1", "b:0"]  # b gets a slot, one refill from a
+    assert all(c.document_id != "s" for c in res.chunks)
+
+
+def test_chunk_cap_setting_is_validated_and_blank_env_means_off(make_settings, monkeypatch):
+    with pytest.raises(Exception):
+        make_settings(retrieval_max_chunks_per_doc=0)
+    monkeypatch.setenv("RETRIEVAL_MAX_CHUNKS_PER_DOC", "")
+    assert make_settings().retrieval_max_chunks_per_doc is None
+    monkeypatch.setenv("RETRIEVAL_MAX_CHUNKS_PER_DOC", "3")
+    assert make_settings().retrieval_max_chunks_per_doc == 3
+
+
 def test_retriever_without_reranker_is_unchanged_and_off_by_default(settings, embedder):
     assert settings.rerank_enabled is False
     store = _StubStore([_tc("a", "internal", 0.9, "x"), _tc("b", "internal", 0.8, "y")])

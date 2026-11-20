@@ -8,6 +8,8 @@ Ranks a pool of chunks per dataset question with the reranker OFF (cosine order,
    that have no private evidence. The score threshold (``RETRIEVAL_MIN_SCORE``) can only help if these two overlap little.
 3. THRESHOLD SWEEP: for each cut-off, how many answerable questions would lose ALL their relevant chunks (too strict)
    and how many no-evidence questions would be stopped before grading (saved LLM calls).
+4. PER-DOCUMENT CAP: real retrieval at RETRIEVAL_TOP_K with ``RETRIEVAL_MAX_CHUNKS_PER_DOC`` off, 3, 2 and 1: does a cap bring
+   the missing second document into multi-document answers, and what does it cost in chunk ranking quality?
 
 Usage (project root, venv active):
     python scripts/calibrate_retrieval.py
@@ -60,7 +62,8 @@ def main() -> int:
     setup_logging(level="WARNING")
     s = get_settings()
     off = s.model_copy(update={"rerank_enabled": False})
-    retriever = Retriever(off, embedder=get_embedding_service(), store=PineconeStore(s))
+    embedder, store = get_embedding_service(), PineconeStore(s)
+    retriever = Retriever(off, embedder=embedder, store=store)
     cases = load_dataset(s.eval_dataset_path)
     print(f"{len(cases)} cases; pool={s.eval_retrieval_pool}; current RETRIEVAL_TOP_K={s.retrieval_top_k}, RETRIEVAL_MIN_SCORE={s.retrieval_min_score}")
 
@@ -123,12 +126,36 @@ def main() -> int:
     print(f"\n   highest cut-off that loses no answerable question: {max(safe) if safe else 'none'}"
           " (leave a margin below it; the LLM grader, not this threshold, decides sufficiency)")
 
+    # 4) per-document cap at the real top-k
+    k = s.retrieval_top_k
+    print(f"\n4) PER-DOCUMENT CAP (real retrieval at top_k={k}, reranker off, min_score=0)")
+    print(f"{'cap':>5}  {'doc_recall':>10}  {'multi_doc_recall':>16}  {'chunk_precision':>15}  {'chunk_mrr':>9}  multi-doc still short")
+    cap_results = {}
+    for cap in (None, 3, 2, 1):
+        r = Retriever(off.model_copy(update={"retrieval_max_chunks_per_doc": cap}), embedder=embedder, store=store)
+        per = {}
+        for c in answerable:
+            res = r.retrieve(c.question, c.role, top_k=k, min_score=0.0)
+            items = [RetrievedItem(document_name=x.document_name, chunk_id=x.chunk_id, score=x.score, text=x.text) for x in res.chunks]
+            per[c.id] = score_retrieval(c, items, [k])
+        row = {
+            "doc_recall": mean([per[c.id][f"doc_recall@{k}"] for c in answerable]),
+            "multi_doc_recall": mean([per[c.id][f"doc_recall@{k}"] for c in multi]),
+            "chunk_precision": mean([per[c.id][f"chunk_precision@{k}"] for c in answerable]),
+            "chunk_mrr": mean([per[c.id]["chunk_mrr"] for c in answerable]),
+            "multi_doc_short": [c.id for c in multi if per[c.id][f"doc_recall@{k}"] < 1],
+        }
+        cap_results["off" if cap is None else str(cap)] = row
+        print(f"{'off' if cap is None else cap:>5}  {fmt(row['doc_recall']):>10}  {fmt(row['multi_doc_recall']):>16}  "
+              f"{fmt(row['chunk_precision']):>15}  {fmt(row['chunk_mrr']):>9}  {row['multi_doc_short'] or 'none'}")
+    print("   a cap only helps if multi-doc recall rises without chunk_mrr falling; the default stays off until answer quality is measured")
+
     out = s.eval_dir / "results" / time.strftime("calibration_%Y%m%dT%H%M%S")
     out.mkdir(parents=True, exist_ok=True)
     (out / "summary.json").write_text(json.dumps({
         "n_cases": len(cases), "current": {"top_k": s.retrieval_top_k, "min_score": s.retrieval_min_score},
         "top_k_sweep": sweep, "best_relevant_score": best_rel, "no_evidence_top1": top1_noev,
-        "threshold_sweep": {str(k): v for k, v in tsweep.items()}}, indent=2), encoding="utf-8")
+        "threshold_sweep": {str(t): v for t, v in tsweep.items()}, "per_document_cap": cap_results}, indent=2), encoding="utf-8")
     print(f"\nSaved to {out}\nNote: small synthetic corpus; retrieval only, answer quality not measured.")
     return 0
 

@@ -95,7 +95,11 @@ class Settings(BaseSettings):
     # Optional second-stage reranker (local cross-encoder). Off by default so existing evaluation numbers stay valid.
     rerank_enabled: bool = False
     rerank_model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
-    rerank_candidates: int = Field(default=20, ge=1, le=50, description="Chunks fetched from Pinecone before reranking down to top_k.")
+    rerank_candidates: int = Field(default=20, ge=1, le=50, description="Chunks fetched from Pinecone before reranking or per-document capping down to top_k.")
+    retrieval_max_chunks_per_doc: int | None = Field(
+        default=None, ge=1, le=50,
+        description="Optional soft cap on chunks from one document in the final top-k (None = off). Frees slots for other documents; unused slots are refilled.",
+    )
     private_evidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
     external_evidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
     external_max_age_days: int = Field(default=365, gt=0)
@@ -170,9 +174,9 @@ class Settings(BaseSettings):
     def _normalize_extensions(cls, value: list[str]) -> list[str]:
         return [e.lower() if e.startswith(".") else f".{e.lower()}" for e in value]
 
-    @field_validator("groq_top_p", mode="before")
+    @field_validator("groq_top_p", "retrieval_max_chunks_per_doc", mode="before")
     @classmethod
-    def _empty_top_p_is_none(cls, value: object) -> object:
+    def _empty_optional_number_is_none(cls, value: object) -> object:
         return None if isinstance(value, str) and not value.strip() else value
 
     @field_validator("groq_reasoning_effort", mode="before")
