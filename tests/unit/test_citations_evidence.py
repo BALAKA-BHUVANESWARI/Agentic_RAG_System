@@ -81,3 +81,32 @@ def test_render_answer_prepends_exact_external_warning_only_for_external():
     assert mixed.startswith(
         "External information: This response uses public vendor information and may not represent your company's internal IT policy."
     )
+
+
+# ---- superseded documents --------------------------------------------------------------
+def test_superseded_evidence_is_labelled_in_the_block_and_in_the_answer():
+    items = [_ev(1), _ev(2, status="superseded", superseded_by="Policy_v3.txt")]
+    block = format_evidence(items, 500)
+    assert block.count('status="superseded"') == 1 and 'status="superseded" superseded_by="Policy_v3.txt"' in block
+    cites = build_citations(items, [1, 2])
+    assert [c.superseded for c in cites] == [False, True]
+    out = render_answer("New [1]; old [2]", cites)
+    assert out.startswith("Outdated source: [2] doc2.txt has been superseded by Policy_v3.txt.")
+    assert "[1] doc1.txt - section 'S'\n[2] doc2.txt - section 'S' (superseded)" in out
+
+
+def test_no_superseded_notice_when_only_current_documents_are_cited():
+    out = render_answer("Body [1]", build_citations([_ev(1), _ev(2, status="superseded")], [1]))
+    assert "Outdated source" not in out and "(superseded)" not in out
+
+
+def test_superseded_notice_without_a_replacement_name():
+    out = render_answer("Old [1]", build_citations([_ev(1, status="superseded")], [1]))
+    assert "has been superseded by a newer document." in out
+
+
+def test_retrieved_chunk_status_reaches_the_evidence_item():
+    chunk = RetrievedChunk(chunk_id="c1", document_id="d1", document_name="old.txt", status="superseded", superseded_by="new.txt", text="t")
+    item = from_retrieved_chunks([chunk])[0]
+    assert (item.status, item.superseded_by) == ("superseded", "new.txt")
+    assert 'status="superseded"' not in format_evidence(from_retrieved_chunks([chunk.model_copy(update={"status": "current"})]), 100)

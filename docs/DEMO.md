@@ -13,11 +13,11 @@ A guided walkthrough that proves the whole system works, using the two reference
 
 ## 0a. Pre-flight checklist (do this first; most steps cost no tokens)
 
-1. **Confirm the knowledge base is exactly the 11 core documents** (Admin > Documents). Extra or demo documents change the answers and make runs incomparable.
+1. **Confirm the knowledge base is exactly the 11 core documents** (Admin > Documents). Extra or demo documents change the answers and make runs incomparable. After the superseded-status change, run `python scripts\ingest_kb.py` once so `Password_Policy_Legacy_2022.txt` is re-indexed with its `Status:` marker (it becomes version 2, and the list must still show 11 documents).
 2. **Free checks** (no Groq tokens): `python scripts\run_eval.py --validate-only`, and `pytest -q`.
 3. **Check Groq has budget before the first question.** The daily limit is per organization and model and refills gradually (roughly 8,000 tokens per hour), so a new API key does not help. `python scripts\check_groq.py` makes one small call: if it returns a `429`, wait and try again later instead of starting the demo.
 4. **Token expectation.** The earlier estimate for this demo is about 15,000 to 25,000 tokens. For comparison, the recorded evaluation run used about 4,600 tokens per agentic question (109,792 tokens over 24 questions), so 10 questions would be near 46,000 in the worst case. Either way it fits in one day's 200,000, but not alongside an evaluation run.
-5. **Order that wastes the least if the budget runs out:** health check (free) -> A (VPN) -> B (Teams) -> S1 and S3 (cheap) -> S2, S4, S5, S6 -> section 5 (audit and feedback, free). If a `429` stops you, note which step you reached and continue on another day.
+5. **Order that wastes the least if the budget runs out:** health check (free) -> A (VPN) -> B (Teams) -> S1 and S3 (cheap) -> S2, S4, S5, S6, S7 -> section 5 (audit and feedback, free). If a `429` stops you, note which step you reached and continue on another day.
 6. **Do not run anything else that uses Groq** while the demo runs (no evaluation, no second browser tab asking questions).
 7. **What to keep for the write-up:** the Request ID of A and B (shown under the trace), the `--verbose` output with any key removed, and the filled-in tables. The README screenshots already exist in `docs/screenshots/`, so retake them only if the UI changed.
 
@@ -86,7 +86,8 @@ Live web results vary between runs, so B3 and B4 are both valid outcomes. What m
 | S2 | `python scripts\ask_agent.py "What is the process to request a second monitor for my desk?"` | Company-specific and undocumented: retries, then abstains with **no** web search (regression check for the routing fix) | |
 | S3 | `python scripts\ask_agent.py "What's a good recipe for lasagna?"` | Out of scope: `query_classifier → answer_generator → final_answer_validator → audit_logger`, no retrieval, no search | |
 | S4 | Employee asks `How does the service desk verify a caller?`, then admin asks the same | Employee gets no restricted document (abstains); admin gets an answer citing `Service_Desk_Runbook.txt` | |
-| S5 | Ask `What is the minimum password length?` | Cites the current policy; mentions the legacy 2022 policy only as outdated or conflicting | |
+| S5 | Ask `What is the minimum password length?` | States the current rule (14 characters) from `Password_Policy.txt`. If it also cites the 2022 policy, the answer starts with an `Outdated source:` line naming `Password_Policy.txt` as its replacement and the Sources list marks it `(superseded)` | |
+| S7 | Ask `What was the minimum password length in the 2022 edition of the password policy?` (needs the re-indexed legacy document, pre-flight step 1) | Answers 8 characters, cites `Password_Policy_Legacy_2022.txt`, and shows the `Outdated source:` line | |
 | S6 | Ask a question containing a fake secret, for example `my password is hunter2, why does Teams fail?` | Classified as sensitive; no web search; the secret is not stored in the audit record | |
 
 ## 5. Audit, feedback and administration
@@ -121,4 +122,4 @@ Do not include API keys, `.env` contents or other secrets in screenshots or past
 
 ## 7. Pass criteria
 
-The demo passes when A1 to A5 hold, B1 to B5 hold for whichever outcome (answer or abstention) occurred, and S1 to S6 all behave as expected. Any deviation is a finding to report, not something to hide: paste the trace and the request id and the cause can be traced from the audit record.
+The demo passes when A1 to A5 hold, B1 to B5 hold for whichever outcome (answer or abstention) occurred, and S1 to S7 all behave as expected. Any deviation is a finding to report, not something to hide: paste the trace and the request id and the cause can be traced from the audit record.

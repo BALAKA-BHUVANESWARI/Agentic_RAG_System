@@ -87,7 +87,8 @@ class IngestionPipeline:
                 raise IngestionError("Document contains no extractable text (is it a scanned image?).")
             full_text = "\n\n".join(seg.text for seg in segments)
             content_hash = make_content_hash(
-                full_text, category=metadata.category, department=metadata.department, access_level=metadata.access_level
+                full_text, category=metadata.category, department=metadata.department, access_level=metadata.access_level,
+                status=metadata.status, superseded_by=metadata.superseded_by,
             )
         except IngestionError as exc:
             return self._record_prepare_failure(name, document_id, data, existing, uploaded_by, str(exc))

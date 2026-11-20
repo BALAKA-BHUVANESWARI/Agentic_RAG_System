@@ -1948,6 +1948,90 @@
       "forbidden_keywords": [],
       "expects_conflict_notice": false,
       "notes": "external search disabled for the request: must not call Tavily and must abstain"
+    },
+    {
+      "id": "V01",
+      "category": "direct_kb",
+      "question": "What is the current minimum password length?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "current: 14 characters",
+          "keywords": [
+            "14 characters"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "Superseded-document case: asks for the rule in force now. The 2022 edition (8 characters) is marked Status: superseded and may appear only as the older rule. The keyword check cannot see whether 8 was presented as current; the validator flag and a read of the answer do."
+    },
+    {
+      "id": "V02",
+      "category": "direct_kb",
+      "question": "What was the minimum password length in the 2022 edition of the password policy?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "2022 edition: 8 characters",
+          "keywords": [
+            "8 characters"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "Superseded-document case: a history question. The answer may use the superseded document, which the system labels as outdated."
+    },
+    {
+      "id": "V03",
+      "category": "direct_kb",
+      "question": "How did password resets work under the old 2022 policy?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt",
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "2022 edition: temporary password from the service desk",
+          "keywords": [
+            "temporary password"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy_Legacy_2022.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "Superseded-document case: a history question about the earlier reset procedure."
     }
   ]
 }

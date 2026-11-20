@@ -96,3 +96,37 @@ def test_chunk_document_keeps_pdf_page_numbers(settings):
         segments=build_segments(loaded), metadata=meta, settings=settings,
     )
     assert [c.page_number for c in chunks] == [1, 2]
+
+
+# ---- document status (superseded versions) ---------------------------------------------
+def test_status_superseded_by_is_parsed_and_stripped_from_the_body():
+    text = HEADER.replace("Last-Reviewed: 2025-02-14\n", "Last-Reviewed: 2025-02-14\nStatus: Superseded by VPN_Guide_v4.txt\n")
+    meta, loaded = extract_metadata(_txt(text))
+    assert (meta.status, meta.superseded_by) == ("superseded", "VPN_Guide_v4.txt")
+    assert "Status:" not in loaded.pages[0].text and loaded.pages[0].text.lstrip().startswith("## 1. Overview")
+
+
+def _status_of(text: str) -> tuple[str, str | None]:
+    meta, _ = extract_metadata(_txt(text))
+    return meta.status, meta.superseded_by
+
+
+def test_status_defaults_to_current_and_accepts_explicit_values():
+    assert _status_of(HEADER) == ("current", None)
+    assert _status_of(HEADER.replace("Version: 3\n", "Version: 3\nStatus: current\n")) == ("current", None)
+    assert _status_of(HEADER.replace("Version: 3\n", "Version: 3\nStatus: superseded\n")) == ("superseded", None)
+
+
+def test_body_text_that_starts_with_status_is_not_consumed_as_a_header_line():
+    header, body = split_header("Title: X\nStatus: green and healthy\n\nBody\n")
+    assert header == {"title": "X"} and body.lstrip().startswith("Status: green and healthy")
+
+
+def test_chunks_carry_the_document_status(settings):
+    text = HEADER.replace("Version: 3\n", "Version: 3\nStatus: superseded by New.txt\n")
+    meta, loaded = extract_metadata(_txt(text + "word " * 40))
+    chunks = chunk_document(
+        document_id="d", document_name="old.txt", version=1, uploaded_at="t",
+        segments=build_segments(loaded), metadata=meta, settings=settings,
+    )
+    assert chunks and all((c.status, c.superseded_by) == ("superseded", "New.txt") for c in chunks)

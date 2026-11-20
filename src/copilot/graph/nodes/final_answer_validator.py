@@ -31,12 +31,14 @@ def make_final_answer_validator(deps: GraphDeps):
         items = [EvidenceItem(**e) for e in state.get("evidence", [])]
         grade = state.get("private_grade") or {}
         conflict_expected = bool(grade.get("effective_sufficient") and grade.get("contradiction_detected"))
+        superseded_present = any(i.status == "superseded" for i in items)
         problems: list[str] = []
         if ans.used_external and EXTERNAL_WARNING not in ans.rendered:
             problems.append("external information is not labelled with the required warning")
 
         prompt = (
-            f"conflict_expected: {str(conflict_expected).lower()}\n\n"
+            f"conflict_expected: {str(conflict_expected).lower()}\n"
+            f"superseded_evidence_present: {str(superseded_present).lower()}\n\n"
             f"Evidence:\n{format_evidence(items, s.evidence_max_chars)}\n\n"
             f"DRAFT ANSWER:\n<answer>\n{neutralize_delimiters(ans.answer)}\n</answer>"
         )
@@ -59,10 +61,13 @@ def make_final_answer_validator(deps: GraphDeps):
             problems.append("the sources conflict but the answer does not clearly state each version with its citation")
         if ans.used_external and not check.external_clearly_separated:
             problems.append("public vendor information is not clearly separated from company guidance")
+        if superseded_present and check.superseded_presented_as_current:
+            problems.append("information from a superseded document is presented as the current rule; use the current document for what applies now and label the older version as superseded")
 
         details = {"grounded": check.grounded, "unsupported_claims": check.unsupported_claims,
                    "conflicts_communicated": check.conflicts_communicated, "conflict_expected": conflict_expected,
-                   "external_clearly_separated": check.external_clearly_separated, "reasoning": check.reasoning,
+                   "external_clearly_separated": check.external_clearly_separated,
+                   "superseded_presented_as_current": check.superseded_presented_as_current, "reasoning": check.reasoning,
                    "problems": problems}
         if not problems:
             return {

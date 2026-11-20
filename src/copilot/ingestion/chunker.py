@@ -87,6 +87,8 @@ def chunk_document(
                     uploaded_at=uploaded_at,
                     version=version,
                     last_reviewed=metadata.last_reviewed,
+                    status=metadata.status,
+                    superseded_by=metadata.superseded_by,
                 )
             )
     return chunks

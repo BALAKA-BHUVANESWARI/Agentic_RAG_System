@@ -336,3 +336,61 @@ def test_trace_events_are_real_and_ordered(make_agent, kb):
 def test_blank_question_is_rejected(make_agent):
     with pytest.raises(ValueError):
         make_agent().agent.answer("   ")
+
+
+# ================================ Superseded documents ===============================================
+_CONFLICT_GRADE = dict(GRADE_OK, contradiction_detected=True, contradiction_details="2022 vs 2025 policy", supporting_refs=[1])
+_PW_Q = "What is the minimum password length and how often must passwords be changed?"  # same question as the conflict test above
+
+
+def _agent_for_password_question(make_agent, drafts, checks):
+    return make_agent(settings_overrides={"retrieval_top_k": 8}, QueryClassification=[CLS_INTERNAL], PrivateGrade=[_CONFLICT_GRADE],
+                      AnswerDraft=drafts, GroundingCheck=checks)
+
+
+def test_superseded_document_is_labelled_for_the_model_and_in_the_final_answer(make_agent, kb):
+    import re
+
+    h = _agent_for_password_question(
+        make_agent, [answer_draft("The current policy requires 14 characters [1]; the superseded 2022 policy required 8 characters [2][3][4][5][6][7][8].")],
+        [OK_CHECK])  # markers beyond the evidence count are stripped, so the old document is cited whichever number it has
+    r = h.agent.answer(_PW_Q)
+    prompt = h.llm.prompt("AnswerDraft", 0)
+    old = re.search(r'<evidence[^>]*source="Password_Policy_Legacy_2022.txt"[^>]*>', prompt)
+    new = re.search(r'<evidence[^>]*source="Password_Policy.txt"[^>]*>', prompt)
+    assert old and 'status="superseded"' in old.group(0) and 'superseded_by="Password_Policy.txt"' in old.group(0)
+    assert new and "status=" not in new.group(0)
+    assert "superseded_evidence_present: true" in h.llm.prompt("GroundingCheck", 0)
+    assert not r.answer.abstained and "Outdated source:" in r.answer.rendered
+    assert "Password_Policy_Legacy_2022.txt has been superseded by Password_Policy.txt" in r.answer.rendered
+    assert "(superseded)" in r.answer.rendered
+
+
+def test_validator_sends_back_an_answer_that_presents_superseded_text_as_current(make_agent, kb):
+    stale = dict(grounded=True, superseded_presented_as_current=True)
+    h = _agent_for_password_question(
+        make_agent, [answer_draft("The minimum length is 8 characters [1][2]."),
+                     answer_draft("The current policy requires 14 characters [1]; the superseded 2022 policy required 8 [2].")],
+        [stale, OK_CHECK])
+    r = h.agent.answer(_PW_Q)
+    assert r.path.count("answer_generator") == 2 and not r.answer.abstained
+    assert "superseded document is presented as the current rule" in h.llm.prompt("AnswerDraft", 1)
+
+
+def test_answer_that_keeps_presenting_superseded_text_as_current_abstains(make_agent, kb):
+    stale = dict(grounded=True, superseded_presented_as_current=True)
+    h = _agent_for_password_question(make_agent, [answer_draft("The minimum length is 8 characters [1][2].")], [stale])
+    r = h.agent.answer(_PW_Q)
+    assert r.answer.abstained and r.answer.abstention_reason == "validation_failed"
+    assert "8 characters" not in r.answer.rendered
+
+
+def test_no_superseded_label_or_flag_when_the_evidence_is_all_current(make_agent, kb):
+    h = make_agent(QueryClassification=[CLS_INTERNAL], PrivateGrade=[GRADE_OK], AnswerDraft=[answer_draft("Open the VPN client [1].")],
+                   GroundingCheck=[OK_CHECK])
+    r = h.agent.answer("How do I connect to the company VPN from home?")
+    assert "superseded_evidence_present: false" in h.llm.prompt("GroundingCheck", 0)
+    import re
+
+    blocks = re.findall(r"<evidence[^>]*>", h.llm.prompt("AnswerDraft", 0))  # the system prompt itself mentions the attribute
+    assert blocks and not any("status=" in b for b in blocks) and "Outdated source" not in r.answer.rendered

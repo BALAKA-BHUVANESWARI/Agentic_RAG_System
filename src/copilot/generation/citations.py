@@ -17,10 +17,26 @@ def build_citations(evidence: list[EvidenceItem], used_refs: list[int]) -> list[
             ref=r, kind=by_ref[r].kind, label=by_ref[r].label, location=by_ref[r].location,
             url=by_ref[r].url, chunk_id=by_ref[r].chunk_id, document_id=by_ref[r].document_id,
             page_number=by_ref[r].page_number, section=by_ref[r].section,
+            superseded=by_ref[r].status == "superseded", superseded_by=by_ref[r].superseded_by,
         )
         for r in used_refs
         if r in by_ref
     ]
+
+
+def superseded_notice(citations: list[Citation]) -> str | None:
+    """Fixed notice for answers that cite a document a newer one has replaced (None when none does).
+
+    Added by code, not by the model, so the label never depends on what the LLM wrote.
+    """
+    old = [c for c in citations if c.superseded]
+    if not old:
+        return None
+    parts = []
+    for c in old:
+        by = f" by {c.superseded_by}" if c.superseded_by else " by a newer document"
+        parts.append(f"[{c.ref}] {c.label} has been superseded{by}")
+    return "Outdated source: " + "; ".join(parts) + ". It is cited only for the earlier rule, not as current policy."
 
 
 def render_sources(citations: list[Citation]) -> str:
@@ -28,15 +44,19 @@ def render_sources(citations: list[Citation]) -> str:
     lines = ["Sources:"]
     for c in citations:
         detail = c.url if c.kind == "external" and c.url else c.location
-        lines.append(f"[{c.ref}] {c.label} - {detail}")
+        flag = " (superseded)" if c.superseded else ""
+        lines.append(f"[{c.ref}] {c.label} - {detail}{flag}")
     return "\n".join(lines)
 
 
 def render_answer(body: str, citations: list[Citation]) -> str:
-    """Final text: external warning (if any external source is cited), body, then Sources."""
+    """Final text: external warning and superseded notice (when they apply), body, then Sources."""
     parts = []
     if any(c.kind == "external" for c in citations):
         parts.append(EXTERNAL_WARNING)
+    notice = superseded_notice(citations)
+    if notice:
+        parts.append(notice)
     parts.append(body.strip())
     parts.append(render_sources(citations))
     return "\n\n".join(parts)

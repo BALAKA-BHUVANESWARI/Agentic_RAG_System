@@ -350,3 +350,13 @@ def test_top_p_is_validated_and_blank_env_means_default(make_settings, monkeypat
     from copilot.config import Settings
 
     assert Settings(_env_file=None).groq_top_p is None
+
+
+def test_chunk_status_is_stored_and_old_vectors_default_to_current():
+    md = chunk_to_metadata(make_chunk(page=None, section=None).model_copy(update={"status": "superseded", "superseded_by": "New.txt"}))
+    assert md["status"] == "superseded" and md["superseded_by"] == "New.txt"
+    restored = RetrievedChunk.from_match("c1", 0.5, md)
+    assert (restored.status, restored.superseded_by) == ("superseded", "New.txt")
+    legacy_vector = {k: v for k, v in md.items() if k not in {"status", "superseded_by"}}  # indexed before this field existed
+    assert RetrievedChunk.from_match("c1", 0.5, legacy_vector).status == "current"
+    assert RetrievedChunk.from_match("c1", 0.5, dict(md, status="garbage")).status == "current"

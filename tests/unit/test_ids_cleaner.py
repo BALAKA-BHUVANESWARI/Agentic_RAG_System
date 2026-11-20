@@ -44,3 +44,12 @@ def test_clean_text_rejoins_hyphenated_words_only_before_lowercase():
 def test_clean_text_keeps_headings_and_list_structure():
     text = "## Title\n1. one\n2. two"
     assert clean_text(text) == text
+
+
+def test_content_hash_covers_superseded_status_but_not_the_current_default():
+    base = dict(category="c", department="d", access_level="internal")
+    current = make_content_hash("hello", **base)
+    assert current == make_content_hash("hello", **base, status="current", superseded_by=None)  # existing hashes stay valid
+    old = make_content_hash("hello", **base, status="superseded")
+    assert old != current
+    assert make_content_hash("hello", **base, status="superseded", superseded_by="New.txt") != old

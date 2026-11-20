@@ -24,7 +24,7 @@ def from_retrieved_chunks(chunks: list[RetrievedChunk]) -> list[EvidenceItem]:
         EvidenceItem(
             ref=i, kind="private", label=c.document_name, location=c.location, text=c.text,
             chunk_id=c.chunk_id, document_id=c.document_id, page_number=c.page_number, section=c.section,
-            last_reviewed=c.last_reviewed,
+            last_reviewed=c.last_reviewed, status=c.status, superseded_by=c.superseded_by,
         )
         for i, c in enumerate(chunks, start=1)
     ]
@@ -38,6 +38,10 @@ def format_evidence(items: list[EvidenceItem], max_chars: int) -> str:
         extras = ""
         if item.last_reviewed:
             extras += f' reviewed="{_attr(item.last_reviewed)}"'
+        if item.status == "superseded":
+            extras += ' status="superseded"'
+            if item.superseded_by:
+                extras += f' superseded_by="{_attr(item.superseded_by)}"'
         if item.published_date:
             extras += f' published="{_attr(item.published_date)}"'
         if item.url:

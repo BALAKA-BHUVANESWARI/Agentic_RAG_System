@@ -95,4 +95,5 @@ class GroundingCheck(BaseModel):
     unsupported_claims: list[str] = Field(default_factory=list)
     conflicts_communicated: bool = True
     external_clearly_separated: bool = True
+    superseded_presented_as_current: bool = False
     reasoning: str = ""

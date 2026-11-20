@@ -36,7 +36,8 @@ def main() -> int:
     for i, c in enumerate(result.chunks, start=1):
         snippet = " ".join(c.text.split())[:140]
         rr = f" rerank={c.rerank_score:.2f}" if c.rerank_score is not None else ""
-        print(f"{i}. score={c.score:.3f}{rr} [{c.access_level}] {c.document_name} ({c.location})\n   {snippet}...\n")
+        old_doc = " [SUPERSEDED]" if c.status == "superseded" else ""
+        print(f"{i}. score={c.score:.3f}{rr} [{c.access_level}]{old_doc} {c.document_name} ({c.location})\n   {snippet}...\n")
     return 0
 
 

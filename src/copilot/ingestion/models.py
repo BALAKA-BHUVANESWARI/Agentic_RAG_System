@@ -39,6 +39,8 @@ class DocumentMetadata(BaseModel):
     access_level: AccessLevel = "internal"
     last_reviewed: str | None = None
     source_version: str | None = None
+    status: Literal["current", "superseded"] = "current"
+    superseded_by: str | None = None  # name of the newer document, when the header names one
 
 
 class Segment(BaseModel):
@@ -66,6 +68,8 @@ class Chunk(BaseModel):
     uploaded_at: str
     version: int
     last_reviewed: str | None = None
+    status: Literal["current", "superseded"] = "current"
+    superseded_by: str | None = None
 
     @property
     def embedding_text(self) -> str:

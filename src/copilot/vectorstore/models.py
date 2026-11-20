@@ -21,6 +21,8 @@ class RetrievedChunk(BaseModel):
     version: int = 1
     uploaded_at: str = ""
     last_reviewed: str | None = None
+    status: str = "current"  # "superseded" = replaced by a newer document; older vectors without it are current
+    superseded_by: str | None = None
     text: str = ""
     score: float = 0.0  # vector similarity (cosine) from Pinecone
     rerank_score: float | None = None  # cross-encoder score, set only when reranking ran
@@ -43,6 +45,8 @@ class RetrievedChunk(BaseModel):
             version=int(md.get("version", 1)),
             uploaded_at=md.get("uploaded_at", ""),
             last_reviewed=md.get("last_reviewed"),
+            status="superseded" if md.get("status") == "superseded" else "current",
+            superseded_by=md.get("superseded_by"),
             text=md.get("text", ""),
             score=float(score),
         )

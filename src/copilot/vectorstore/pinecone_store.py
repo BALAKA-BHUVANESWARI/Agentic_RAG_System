@@ -28,6 +28,8 @@ def chunk_to_metadata(chunk: Chunk) -> dict[str, Any]:
         "uploaded_at": chunk.uploaded_at,
         "version": chunk.version,
         "last_reviewed": chunk.last_reviewed,
+        "status": chunk.status,
+        "superseded_by": chunk.superseded_by,
         "text": chunk.text,
     }
     return {k: v for k, v in metadata.items() if v is not None}

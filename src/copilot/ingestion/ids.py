@@ -22,13 +22,20 @@ def make_chunk_id(document_id: str, version: int, index: int) -> str:
     return f"{document_id}:v{version}:{index}"
 
 
-def make_content_hash(text: str, *, category: str, department: str, access_level: str) -> str:
-    """Hash of cleaned text plus access-relevant metadata.
+def make_content_hash(
+    text: str, *, category: str, department: str, access_level: str, status: str = "current", superseded_by: str | None = None
+) -> str:
+    """Hash of cleaned text plus the metadata that changes how a document is retrieved.
 
-    Including metadata means changing only the access level or category triggers a
-    re-index, while re-uploading identical content is detected as a duplicate.
+    Including metadata means changing only the access level, category or superseded status
+    triggers a re-index, while re-uploading identical content is detected as a duplicate.
+    The status is added only for superseded documents, so hashes of current documents (all of
+    them before the status header existed) do not change.
     """
-    payload = "\x1f".join([text, category, department, access_level])
+    parts = [text, category, department, access_level]
+    if status != "current":
+        parts += [status, superseded_by or ""]
+    payload = "\x1f".join(parts)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 

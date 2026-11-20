@@ -173,3 +173,25 @@ def test_teams_outage_question_has_no_strong_private_match(kb_loaded, retriever)
     """Scenario B precondition: nothing in the KB mentions outages, so no chunk text should."""
     res = retriever.retrieve("latest Microsoft Teams outage guidance", "admin", top_k=10)
     assert not any("outage" in c.text.lower() and "teams" in c.text.lower() for c in res.chunks)
+
+
+def test_legacy_password_policy_is_indexed_as_superseded_and_current_one_is_not(kb_loaded, retriever):
+    res = retriever.retrieve("What is the minimum password length and how often must passwords be changed?", "employee", top_k=6)
+    old = [c for c in res.chunks if c.document_name == "Password_Policy_Legacy_2022.txt"]
+    new = [c for c in res.chunks if c.document_name == "Password_Policy.txt"]
+    assert old and new
+    assert all((c.status, c.superseded_by) == ("superseded", "Password_Policy.txt") for c in old)
+    assert all((c.status, c.superseded_by) == ("current", None) for c in new)
+    assert all("Status:" not in c.text for c in old)  # the header line is metadata, not searchable text
+
+
+def test_marking_a_document_superseded_is_a_new_version_not_a_skipped_duplicate(pipeline, index):
+    pipeline.ingest_bytes("guide.txt", DOC.encode())
+    assert {md["status"] for _, md in index.data["kb"].values()} == {"current"}
+    superseded = DOC.replace("Access-Level: internal\n", "Access-Level: internal\nStatus: superseded by New_Guide.txt\n")
+    r = pipeline.ingest_bytes("guide.txt", superseded.encode())
+    assert (r.status, r.version) == ("indexed", 2)  # a header-only status change must not be skipped as unchanged
+    metadata = [md for _, md in index.data["kb"].values()]
+    assert metadata and all((md["status"], md["superseded_by"]) == ("superseded", "New_Guide.txt") for md in metadata)
+    assert all(i.startswith(f"{make_document_id('guide.txt')}:v2:") for i in _ids(index))  # old vectors removed
+    assert pipeline.ingest_bytes("guide.txt", superseded.encode()).status == "skipped"

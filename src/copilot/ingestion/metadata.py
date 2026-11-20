@@ -1,7 +1,7 @@
 """Document metadata: header parsing and resolution of overrides/defaults.
 
 A document may begin with a disclaimer line followed by ``Key: Value`` lines
-(Title, Category, Department, Access-Level, Version, Last-Reviewed). Explicit
+(Title, Category, Department, Access-Level, Version, Last-Reviewed, Status). Explicit
 arguments (e.g. from the admin upload form) always win over header values.
 """
 from __future__ import annotations
@@ -14,7 +14,9 @@ from copilot.ingestion.validators import ValidationFailed
 
 DISCLAIMER_PREFIX = "SYNTHETIC DEMO DOCUMENT"
 VALID_ACCESS_LEVELS = ("public", "internal", "restricted")
-_KNOWN_KEYS = {"title", "category", "department", "access-level", "version", "last-reviewed"}
+_KNOWN_KEYS = {"title", "category", "department", "access-level", "version", "last-reviewed", "status"}
+# "Status: current" or "Status: superseded [by <document>]". Any other value is not a status line.
+_STATUS_VALUE = re.compile(r"^(current|superseded)(?:\s+by\s+(.+))?$", re.IGNORECASE)
 _HEADER_LINE = re.compile(r"^([A-Za-z][A-Za-z _-]{1,30}):\s*(.+)$")
 
 
@@ -40,6 +42,8 @@ def split_header(text: str) -> tuple[dict[str, str], str]:
             continue
         match = _HEADER_LINE.match(line)
         key = match.group(1).strip().lower().replace(" ", "-").replace("_", "-") if match else ""
+        if match and key == "status" and not _STATUS_VALUE.match(match.group(2).strip()):
+            break  # not a status line (for example body text that happens to start with "Status:")
         if match and key in _KNOWN_KEYS:
             header[key] = match.group(2).strip()
             i += 1
@@ -48,6 +52,16 @@ def split_header(text: str) -> tuple[dict[str, str], str]:
     if not header:
         return {}, text
     return header, "\n".join(lines[i:])
+
+
+def parse_status(value: str | None) -> tuple[str, str | None]:
+    """Return ``(status, superseded_by)`` from a header value; a missing value means ``current``."""
+    match = _STATUS_VALUE.match((value or "").strip())
+    if not match:
+        return "current", None
+    status = match.group(1).lower()
+    by = (match.group(2) or "").strip() or None
+    return status, (by if status == "superseded" else None)
 
 
 def _humanize(file_name: str) -> str:
@@ -73,6 +87,7 @@ def extract_metadata(
         raise ValidationFailed(
             f"Invalid access level '{level}'. Allowed: {', '.join(VALID_ACCESS_LEVELS)}."
         )
+    status, superseded_by = parse_status(header.get("status"))
     metadata = DocumentMetadata(
         title=header.get("title") or _humanize(loaded.file_name),
         category=(category or header.get("category") or "general").strip().lower(),
@@ -80,5 +95,7 @@ def extract_metadata(
         access_level=level,  # type: ignore[arg-type]
         last_reviewed=header.get("last-reviewed"),
         source_version=header.get("version"),
+        status=status,  # type: ignore[arg-type]
+        superseded_by=superseded_by,
     )
     return metadata, loaded.model_copy(update={"pages": pages})

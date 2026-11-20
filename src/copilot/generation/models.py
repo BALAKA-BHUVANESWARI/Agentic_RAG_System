@@ -35,6 +35,8 @@ class EvidenceItem(BaseModel):
     page_number: int | None = None
     section: str | None = None
     last_reviewed: str | None = None  # private docs: review date from the document header
+    status: Literal["current", "superseded"] = "current"  # private docs: "superseded" = replaced by a newer document
+    superseded_by: str | None = None
     published_date: str | None = None  # external pages: publication date if known
 
 
@@ -50,6 +52,8 @@ class Citation(BaseModel):
     document_id: str | None = None
     page_number: int | None = None
     section: str | None = None
+    superseded: bool = False  # the cited document has been replaced by a newer one
+    superseded_by: str | None = None
 
 
 class GeneratedAnswer(BaseModel):
