@@ -3,7 +3,7 @@
 Examples (from the project root, venv active):
     python scripts/run_eval.py --validate-only                      # check dataset vs knowledge base (no network, no cost)
     python scripts/run_eval.py --per-category 1 --no-judge          # cheap smoke run: 8 questions x 2 systems
-    python scripts/run_eval.py --mode both                          # full run (52 questions x 2 systems; slow on free Groq tiers)
+    python scripts/run_eval.py --mode both                          # full run (70 questions x 2 systems; slow on free Groq tiers)
     python scripts/run_eval.py --categories direct_kb paraphrased --mode agentic
     python scripts/run_eval.py --resume <run_id>                    # continue an interrupted run / retry failed cases
     python scripts/run_eval.py --list-runs

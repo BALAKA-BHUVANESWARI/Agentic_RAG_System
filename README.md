@@ -108,13 +108,13 @@ it-support-copilot/
 ├── Dockerfile, docker-compose.yml, .dockerignore
 ├── data/
 │   ├── kb_documents/          11 synthetic demo documents
-│   ├── eval/dataset.json      52 labelled evaluation questions in 8 categories
+│   ├── eval/dataset.json      70 labelled evaluation questions in 8 categories
 │   ├── eval/results/          evaluation run outputs (git-ignored)
 │   └── sqlite/                app.db (git-ignored)
 ├── frontend/streamlit_app.py  Streamlit entry point
 ├── scripts/                   init_db, check_env, check_groq, ingest_kb, search_kb,
 │                              ask_baseline, ask_agent, run_api, run_eval,
-│                              eval_rerank_ab
+│                              eval_rerank_ab, calibrate_retrieval
 ├── src/copilot/
 │   ├── config.py, logging_config.py, retry.py, utils.py
 │   ├── auth/                  demo roles and access levels
@@ -286,7 +286,7 @@ Interactive documentation is served at `/docs`. Identity headers: `X-Demo-Role`,
 
 Evaluation is a first-class part of the project and lives in `src/copilot/evaluation/`.
 
-**Dataset:** `data/eval/dataset.json` has 52 labelled questions in 8 categories: direct internal, paraphrased, needs query rewriting, insufficient private evidence, current external information, conflicting documents, unanswerable, out of scope. Each case has the question, the role, the expected route, expected documents, expected answer points, expected citations, whether abstention is expected, and whether external search is allowed. `--validate-only` checks every label against the knowledge base.
+**Dataset:** `data/eval/dataset.json` has 70 labelled questions in 8 categories: direct internal, paraphrased, needs query rewriting, insufficient private evidence, current external information, conflicting documents, unanswerable, out of scope. Each case has the question, the role, the expected route, expected documents, expected answer points, expected citations, whether abstention is expected, and whether external search is allowed. `--validate-only` checks every label against the knowledge base.
 
 **Metrics:**
 
@@ -306,6 +306,7 @@ python scripts\run_eval.py --per-category 3 --delay 5              # larger run 
 python scripts\run_eval.py --list-runs
 python scripts\run_eval.py --resume <run_id>                       # continue an interrupted or stopped run
 python scripts\eval_rerank_ab.py                                  # reranker off vs on, retrieval only (no LLM or search calls, no tokens)
+python scripts\calibrate_retrieval.py                             # top-k and score-threshold calibration, retrieval only (no tokens)
 ```
 
 Press Ctrl+C once to stop after the current case; the run stays resumable. A circuit breaker stops a run after `EVAL_MAX_CONSECUTIVE_ERRORS` infrastructure errors in a row (for example an exhausted daily quota). Outputs go to `data/eval/results/<run_id>/` (`summary.json`, `cases.csv`, `metrics.csv`, `cases.jsonl`, `retrieval.jsonl`, `config.json`) and run metadata to the SQLite `eval_runs` table. The Streamlit **Admin → Evaluation** tab shows the dashboard: retrieval, answer, routing and external-search metrics, latency and cost, failed cases, and baseline vs agentic.
@@ -347,7 +348,8 @@ Retrieval (12 questions with expected documents): document recall@5 1.00, docume
 - Private-first routing was 20/21: one question skipped private retrieval because the classifier marked it out of scope. The rewrite-success figure (0/1) rests on a single question and says almost nothing.
 - Faithfulness comes from an LLM judge of the same model family as the generator, so treat it as a noisy signal. LLM confidence values are used as decision signals, not as calibrated probabilities.
 - **Reranker (evaluated, not enabled):** the optional cross-encoder reranker (`RERANK_ENABLED`, default off) was off in this run. A separate retrieval-only comparison (`scripts\eval_rerank_ab.py`, no LLM or search calls, the 32 questions that have expected documents, 2026-11-20) found no benefit on this corpus: chunk MRR was 0.932 without the reranker, 0.930 with `ms-marco-MiniLM-L-6-v2` and 0.892 with `bge-reranker-base`, and document recall@5 was 1.000 in every case. An earlier version scored each chunk without its section heading, which the embedder does see, and chunk MRR fell to 0.822; scoring `title | section` plus the text fixed that. It still lowered MRR on vague, symptom-style questions (`needs_rewriting`: 0.833 to 0.626). With 32 questions the differences are within noise, the metrics rank the original question rather than the rewritten one, and answer quality with the reranker was not measured, so no claim is made that it improves retrieval or reduces hallucinations. It stays off.
-- Run it again (and with the full 52 questions, resuming across days if needed) before drawing conclusions.
+- **Retrieval calibration (no LLM calls, 44 answerable and 22 no-evidence questions, reranker off, 2026-11-20):** with `RETRIEVAL_TOP_K=5`, 2 of 9 multi-document questions (M01, M03) miss one of their two expected documents (multi-document recall 0.889); it reaches 1.000 at `k=8`, while chunk precision falls from 0.291 to 0.199 and every prompt carries three more chunks. The effect on answer quality was not measured, so the default stays 5. `RETRIEVAL_MIN_SCORE=0.25` is the highest cut-off that loses no answerable question (0.30 would lose one) but it stops only 1 of 22 no-evidence questions, because cosine similarity measures topic closeness: relevant chunks have a median best score of 0.617 and no-evidence questions reach 0.735. The evidence grader, not the threshold, decides whether the evidence is sufficient.
+- Run it again (and with the full 70 questions, resuming across days if needed) before drawing conclusions.
 
 ## Testing
 

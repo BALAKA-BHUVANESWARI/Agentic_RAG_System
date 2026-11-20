@@ -38,8 +38,18 @@ def test_dataset_covers_roles_routes_and_access_control_cases():
     assert {c.expected_route for c in cases} == {"private_only", "private_then_external", "private_plus_external", "abstain", "out_of_scope"}
     assert any(c.role == "admin" for c in cases)
     leak_checks = [c for c in cases if c.forbidden_keywords]
-    assert len(leak_checks) >= 2 and all(c.role == "employee" and c.expected_abstention for c in leak_checks)
+    assert all(c.role == "employee" for c in leak_checks)
+    assert len([c for c in leak_checks if c.expected_abstention]) >= 2  # restricted content must be refused
+    assert any(not c.expected_abstention for c in leak_checks)  # answerable from a public document, restricted details must not leak
     assert all(c.expects_conflict_notice for c in cases if c.category == "conflicting")
+
+
+def test_dataset_covers_multi_document_ambiguous_and_search_disabled_cases():
+    cases = load_dataset(DATASET)
+    assert any(len(c.expected_documents) > 1 and c.category != "conflicting" for c in cases)  # needs evidence from two documents
+    assert any(not c.external_search_allowed for c in cases)  # search forbidden for the request
+    assert any("ambiguous" in c.notes for c in cases)
+    assert any("injection" in c.notes for c in cases)
 
 
 def test_expected_document_ids_are_stable_hashes():
