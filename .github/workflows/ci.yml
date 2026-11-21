@@ -4,6 +4,19 @@ on:
     branches: [main]
   pull_request:
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # Unused imports, undefined names and syntax errors (rules in pyproject.toml). Keep the version range in step with requirements.txt.
+      - name: Ruff
+        run: |
+          pip install "ruff>=0.6,<1"
+          ruff check .
+
   pytest:
     runs-on: ubuntu-latest
     steps:
@@ -18,5 +31,29 @@ jobs:
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
       # Fakes only - no API keys and no network calls to Groq, Pinecone or Tavily.
-      - name: Run the test suite
-        run: python -m pytest -q
+      # Coverage was 95% (lines) when this floor was set; the floor only catches a large drop.
+      - name: Run the test suite with coverage
+        run: python -m pytest -q --cov --cov-report=term --cov-fail-under=90
+
+  retrieval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+      - name: Install CPU-only PyTorch, then the requirements
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -r requirements.txt
+      - name: Cache the embedding model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: hf-sentence-transformers-all-MiniLM-L6-v2
+      # Real MiniLM over the synthetic KB in an in-memory index, compared with data/eval/retrieval_baseline.json.
+      # No API keys, no Pinecone, no LLM. Fails if the baseline file is missing: create it locally first (see the README).
+      - name: Retrieval regression check
+        run: python -m pytest tests/retrieval --run-retrieval -q

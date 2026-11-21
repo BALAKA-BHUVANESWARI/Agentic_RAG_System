@@ -133,6 +133,7 @@ def test_server_wait_hint_is_parsed_and_honoured(monkeypatch):
 
     assert r.retry_call(fn, operation="t", max_retries=2, base_delay_s=0.5, max_delay_s=30) == "ok"
     assert sleeps == [6.75]
-    sleeps.clear(); calls.clear()
+    sleeps.clear()
+    calls.clear()
     r.retry_call(fn, operation="t", max_retries=2, base_delay_s=0.5, max_delay_s=3)
     assert sleeps == [3]

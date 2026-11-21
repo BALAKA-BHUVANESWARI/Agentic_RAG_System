@@ -137,6 +137,8 @@ class Settings(BaseSettings):
     # ---- Evaluation -----------------------------------------------------
     eval_dataset_path: Path = Path("data/eval/dataset.json")
     eval_split_path: Path = Path("data/eval/split.json")  # frozen dev/test assignment, see docs/EVAL_SPLIT.md
+    eval_retrieval_baseline_path: Path = Path("data/eval/retrieval_baseline.json")  # committed baseline of the retrieval regression check
+    eval_regression_tolerance: float = Field(default=0.02, ge=0.0, le=0.5, description="Largest drop in a mean retrieval metric the regression check accepts (absolute).")
     eval_ks: list[int] = Field(default_factory=lambda: [1, 3, 5])
     eval_retrieval_pool: int = Field(default=20, ge=5, le=50, description="Chunks retrieved to estimate how many relevant chunks exist.")
     eval_answer_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="Share of expected answer points an answer must contain to count as correct.")
@@ -170,7 +172,7 @@ class Settings(BaseSettings):
     )
 
     # ---- Validators -----------------------------------------------------
-    @field_validator("sqlite_path", "kb_documents_dir", "eval_dir", "uploads_dir", "eval_dataset_path", "eval_split_path")
+    @field_validator("sqlite_path", "kb_documents_dir", "eval_dir", "uploads_dir", "eval_dataset_path", "eval_split_path", "eval_retrieval_baseline_path")
     @classmethod
     def _resolve_relative_to_project(cls, value: Path) -> Path:
         """Anchor relative paths at the project root so cwd never matters."""

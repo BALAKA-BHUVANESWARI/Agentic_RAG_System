@@ -387,7 +387,18 @@ Retrieval (12 questions with expected documents): document recall@5 1.00, docume
 pytest tests\unit tests\workflow tests\api         # no keys or network needed
 pytest -m integration tests\integration            # live Groq/Pinecone tests, skipped without keys
 pytest --cov=copilot tests\unit tests\workflow tests\api
+ruff check .                                       # unused imports, undefined names, syntax errors (rules in pyproject.toml)
+pytest tests\retrieval --run-retrieval             # retrieval regression check with the real MiniLM model (see below)
 docker compose run --rm tests                      # unit tests inside the container
+```
+
+**Coverage.** 95% of lines (5,111 statements, 553 tests, measured 2026-11-21 with `pytest -q --cov`; branch coverage is not measured). `evaluation/factory.py`, the wiring of the real services, is 0% covered because it needs live keys. CI fails below 90%, which only catches a large drop.
+
+**Retrieval regression check.** `tests/retrieval` ingests the synthetic KB with the real `all-MiniLM-L6-v2` model into an in-memory index (no Pinecone, no LLM, no API key), re-measures document recall, MRR and nDCG on every labelled question that names expected documents, and compares the result with the committed `data/eval/retrieval_baseline.json`. A mean that falls by more than `EVAL_REGRESSION_TOLERANCE` (0.02) fails the check, and so does a changed setup (model, chunk size or overlap, `EVAL_KS`, pool size, reranker setting, or the list of KB files), because the numbers would no longer be comparable. It is skipped in a normal run because it loads the model; CI runs it as its own job. The baseline is a snapshot of what the code produced, not a claim that retrieval is good, and it measures ranking for the original question only. The committed snapshot covers 59 questions with the reranker off: document recall@5 0.983 and document MRR 0.975. The only two questions below full recall at 5 are M01 and M03, the multi-document questions already named under the retrieval calibration. Refresh it deliberately after an intended change and review the diff:
+
+```powershell
+python -m pytest tests\retrieval --update-retrieval-baseline    # writes data\eval\retrieval_baseline.json, compares nothing
+python -m pytest tests\retrieval --run-retrieval                # then check
 ```
 
 - `tests/unit`: ids, cleaning, chunking, validators, loaders, sanitizer, URL checks, retrieval and evaluation metrics, routing, citations, config, Docker configuration.

@@ -10,8 +10,9 @@ deeper retrieved pool (``eval_retrieval_pool``). It estimates, but cannot guaran
 from __future__ import annotations
 
 import math
+from typing import Any
 
-from copilot.evaluation.results import RetrievedItem
+from copilot.evaluation.results import RetrievalCaseResult, RetrievedItem
 from copilot.evaluation.schemas import EvalCase
 from copilot.evaluation.text import all_keywords_present, normalize
 
@@ -66,3 +67,15 @@ def score_retrieval(case: EvalCase, items: list[RetrievedItem], ks: list[int]) -
         dn = ndcg_at_k(doc_flags, k, sum(doc_flags))
         out[f"doc_ndcg@{k}"] = dn if dn is not None else 0.0
     return out
+
+
+def rank_case(retriever: Any, case: EvalCase, pool: int, ks: list[int]) -> RetrievalCaseResult:
+    """Rank a pool of chunks for the ORIGINAL question (no score floor, no LLM) and score it.
+
+    The first K items are what a top-K retriever returns; query rewriting is not part of this measurement.
+    Shared by the evaluation runner and the retrieval regression check so both measure the same thing.
+    """
+    res = retriever.retrieve(case.question, case.role, top_k=pool, min_score=0.0)
+    items = [RetrievedItem(document_name=c.document_name, chunk_id=c.chunk_id, score=c.score, text=c.text) for c in res.chunks]
+    return RetrievalCaseResult(case_id=case.id, category=case.category, items=items, scores=score_retrieval(case, items, ks))
+

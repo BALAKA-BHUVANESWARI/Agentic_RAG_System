@@ -1,7 +1,6 @@
 """Unit tests for AnswerGenerator with a scripted fake LLM."""
 from __future__ import annotations
 
-from copilot.generation.answer import AnswerGenerator
 from copilot.generation.citations import EXTERNAL_WARNING
 from copilot.generation.models import EvidenceItem
 from copilot.llm.client import LLMUnavailableError, StructuredOutputError

@@ -4,11 +4,8 @@ from __future__ import annotations
 import threading
 import time
 
-import pytest
-
-from eval_helpers import StubAgent, StubBaseline
-
 from api_helpers import ADM, EMP
+from eval_helpers import StubAgent
 
 
 def test_every_evaluation_endpoint_is_admin_only(eval_api):

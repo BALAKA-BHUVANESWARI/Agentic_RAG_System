@@ -6,6 +6,22 @@ import pytest
 from copilot.config import Settings, get_settings
 
 
+def pytest_addoption(parser):
+    """Options of the retrieval regression check (tests/retrieval), which loads the real embedding model."""
+    parser.addoption("--run-retrieval", action="store_true", default=False, help="Run tests/retrieval (loads the real embedding model).")
+    parser.addoption("--update-retrieval-baseline", action="store_true", default=False, help="Rewrite the retrieval baseline from a fresh measurement (implies --run-retrieval).")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip the model-loading retrieval check unless it was asked for (independent of any -m expression)."""
+    if config.getoption("--run-retrieval") or config.getoption("--update-retrieval-baseline"):
+        return
+    skip = pytest.mark.skip(reason="loads the real embedding model; run with --run-retrieval")
+    for item in items:
+        if item.get_closest_marker("retrieval"):
+            item.add_marker(skip)
+
+
 @pytest.fixture(autouse=True)
 def _clear_settings_cache():
     """Ensure each test sees fresh settings."""

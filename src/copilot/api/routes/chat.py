@@ -1,7 +1,7 @@
 """POST /chat: run the agentic workflow."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from copilot.api.schemas import ChatRequest, ChatResponse, CitationOut, TraceEventOut
 from copilot.api.security import Principal, get_principal

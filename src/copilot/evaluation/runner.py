@@ -28,8 +28,8 @@ from copilot.evaluation.aggregate import ablation_table, compare_modes, summariz
 from copilot.evaluation.attacks import is_attack, summarize_attacks
 from copilot.evaluation.paired import build_intervals
 from copilot.evaluation.reporting import write_cases_csv, write_metrics_csv
-from copilot.evaluation.results import CaseResult, RetrievalCaseResult, RetrievedItem
-from copilot.evaluation.retrieval_metrics import score_retrieval
+from copilot.evaluation.results import CaseResult, RetrievalCaseResult
+from copilot.evaluation.retrieval_metrics import rank_case
 from copilot.evaluation.schemas import CATEGORIES, EvalCase, load_dataset, validate_dataset
 from copilot.evaluation.scoring import score_case
 from copilot.evaluation.store import EvalRunStore
@@ -318,6 +318,7 @@ class EvaluationRunner:
 
         Uses ``min_score=0`` so ranking quality is measured over the whole pool; the first K items are what a
         top-K retriever returns for the ORIGINAL question (query rewriting is not part of this measurement).
+        The measurement itself is :func:`copilot.evaluation.retrieval_metrics.rank_case`.
         """
         path = run_dir / "retrieval.jsonl"
         done = {r.case_id: r for r in _read_jsonl(path, RetrievalCaseResult)}
@@ -325,12 +326,10 @@ class EvaluationRunner:
             if not case.expected_documents or case.id in done:
                 continue
             try:
-                res = self._retriever.retrieve(case.question, case.role, top_k=self._s.eval_retrieval_pool, min_score=0.0)
+                rcr = rank_case(self._retriever, case, self._s.eval_retrieval_pool, self._s.eval_ks)
             except Exception as exc:  # noqa: BLE001 - leave it out; a resumed run retries it
                 log.warning("Retrieval failed for %s: %s", case.id, type(exc).__name__)
                 continue
-            items = [RetrievedItem(document_name=c.document_name, chunk_id=c.chunk_id, score=c.score, text=c.text) for c in res.chunks]
-            rcr = RetrievalCaseResult(case_id=case.id, category=case.category, items=items, scores=score_retrieval(case, items, self._s.eval_ks))
             _append_jsonl(path, rcr)
             done[case.id] = rcr
         wanted = {c.id for c in cases}
