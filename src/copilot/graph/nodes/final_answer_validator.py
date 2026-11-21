@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from copilot.generation.answer import make_abstention
-from copilot.generation.citations import EXTERNAL_WARNING
+from copilot.generation.citations import EXTERNAL_WARNING, conflict_explained_by_status
 from copilot.generation.evidence import format_evidence, neutralize_delimiters
 from copilot.generation.models import EvidenceItem, GeneratedAnswer
 from copilot.graph.deps import GraphDeps
@@ -30,7 +30,12 @@ def make_final_answer_validator(deps: GraphDeps):
 
         items = [EvidenceItem(**e) for e in state.get("evidence", [])]
         grade = state.get("private_grade") or {}
-        conflict_expected = bool(grade.get("effective_sufficient") and grade.get("contradiction_detected"))
+        conflict_in_evidence = bool(grade.get("effective_sufficient") and grade.get("contradiction_detected"))
+        # A conflict between a current document and the older one it replaced is already explained to the reader by
+        # the "Outdated source:" notice that code adds, so the model need not judge it (found by DEMO.md S5, where the
+        # correct answer was rejected twice because the model wanted the word "conflict").
+        explained_by_status = conflict_in_evidence and conflict_explained_by_status(ans.citations)
+        conflict_expected = conflict_in_evidence and not explained_by_status
         superseded_present = any(i.status == "superseded" for i in items)
         problems: list[str] = []
         if ans.used_external and EXTERNAL_WARNING not in ans.rendered:
@@ -66,6 +71,7 @@ def make_final_answer_validator(deps: GraphDeps):
 
         details = {"grounded": check.grounded, "unsupported_claims": check.unsupported_claims,
                    "conflicts_communicated": check.conflicts_communicated, "conflict_expected": conflict_expected,
+                   "conflict_explained_by_status": explained_by_status,
                    "external_clearly_separated": check.external_clearly_separated,
                    "superseded_presented_as_current": check.superseded_presented_as_current, "reasoning": check.reasoning,
                    "problems": problems}

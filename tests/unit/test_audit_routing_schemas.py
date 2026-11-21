@@ -1,6 +1,8 @@
 """Unit tests for the audit logger, routing functions and graph schemas."""
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from copilot.audit.logger import AuditLogger
@@ -63,6 +65,57 @@ def test_audit_redacts_secrets_in_question_and_answer(tmp_path):
     for secret in ("hunter2", "gsk_abcdefghij", "abc999"):
         assert secret not in rec.question and secret not in (rec.final_answer or "")
     assert rec.abstained and rec.abstention_reason == "no_evidence"
+
+
+_CHUNK_ID = "e9dedc92d7347ec41418059ecb6e7c215401edbb55a23d5bb23cdfe4016d33f8:v1:2"
+_LONG_URL = "https://www.businessinsider.com/microsoft-teams-has-worldwide-outage-2021-4?IR=T&r=US"
+
+
+def test_audit_redacts_a_typed_secret_inside_the_stored_trace(tmp_path):
+    """DEMO.md S6 found the raw password in trace[].data.query; the whole trace is now redacted."""
+    trace = [
+        {"node": "private_retriever", "summary": "attempt 0", "data": {"query": "my password is hunter2, why does Teams fail?", "documents": ["Laptop.txt (0.41)"]}},
+        {"node": "query_rewriter", "data": {"rewritten_query": "api_key=abc12345 Teams failure", "added_terms": ["teams"]}},
+    ]
+    audit = AuditLogger(tmp_path / "a.db")
+    audit.record_state(_state(trace=trace, question="my password is hunter2, why does Teams fail?"), execution_time_ms=1)
+    stored = audit.get("r1")
+    blob = json.dumps(stored.trace)
+    assert "hunter2" not in blob and "abc12345" not in blob
+    assert stored.trace[0]["node"] == "private_retriever" and stored.trace[0]["data"]["documents"] == ["Laptop.txt (0.41)"]
+
+
+def test_audit_masks_a_long_typed_token_in_the_trace_but_keeps_ids_and_urls(tmp_path):
+    long_token = "A1b2C3d4" * 6  # 48 characters with no keyword in front of it
+    trace = [
+        {"node": "private_retriever", "data": {"query": f"why does {long_token} fail", "supporting_chunks": [_CHUNK_ID]}},
+        {"node": "external_search", "data": {"urls": [_LONG_URL]}},
+    ]
+    audit = AuditLogger(tmp_path / "a.db")
+    audit.record_state(_state(trace=trace), execution_time_ms=1)
+    blob = json.dumps(audit.get("r1").trace)
+    assert long_token not in blob
+    assert _CHUNK_ID in blob and _LONG_URL in blob
+
+
+def test_audit_redacts_secrets_in_grading_and_validation_results(tmp_path):
+    audit = AuditLogger(tmp_path / "a.db")
+    audit.record_state(
+        _state(private_grade={"reasoning": "user wrote password: hunter2"}, validation={"reasoning": "token: abc999 is not evidence"}),
+        execution_time_ms=1,
+    )
+    stored = audit.get("r1")
+    blob = json.dumps([stored.grading_results, stored.validation_result])
+    assert "hunter2" not in blob and "abc999" not in blob
+
+
+def test_audit_keeps_long_urls_in_the_stored_answer_but_still_masks_credentials(tmp_path):
+    """The old full redaction turned https://learn.microsoft.com/... into https://learn.microsoft.[REDACTED] in stored answers."""
+    answer = {"rendered": f"External information: see [1].\n\nSources:\n[1] Title - {_LONG_URL}\n\nnote token: abc999", "abstained": False}
+    audit = AuditLogger(tmp_path / "a.db")
+    audit.record_state(_state(answer=answer), execution_time_ms=1)
+    stored = audit.get("r1").final_answer
+    assert _LONG_URL in stored and "abc999" not in stored
 
 
 def test_audit_never_raises(tmp_path):

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from fakes import make_chunk
 
-from copilot.generation.citations import EXTERNAL_WARNING, build_citations, render_answer, render_sources
+from copilot.generation.citations import EXTERNAL_WARNING, build_citations, conflict_explained_by_status, render_answer, render_sources
 from copilot.generation.evidence import format_evidence, from_retrieved_chunks, neutralize_delimiters
 from copilot.generation.models import EvidenceItem
 from copilot.validation.citations import extract_markers, strip_invalid_markers, uncited_lines
@@ -103,6 +103,16 @@ def test_no_superseded_notice_when_only_current_documents_are_cited():
 def test_superseded_notice_without_a_replacement_name():
     out = render_answer("Old [1]", build_citations([_ev(1, status="superseded")], [1]))
     assert "has been superseded by a newer document." in out
+
+
+def test_conflict_is_explained_by_status_only_for_one_current_plus_a_superseded_document():
+    items = [_ev(1, document_id="new"), _ev(2, status="superseded", superseded_by="doc1.txt", document_id="old"), _ev(3, document_id="other")]
+    assert conflict_explained_by_status(build_citations(items, [1, 2])) is True
+    assert conflict_explained_by_status(build_citations(items, [1])) is False  # the older version is not stated
+    assert conflict_explained_by_status(build_citations(items, [2])) is False  # no current rule is cited
+    assert conflict_explained_by_status(build_citations(items, [1, 3, 2])) is False  # two current documents may conflict with each other
+    assert conflict_explained_by_status(build_citations(items, [1, 1])) is False  # the same current document twice is still just one rule
+    assert conflict_explained_by_status([]) is False
 
 
 def test_retrieved_chunk_status_reaches_the_evidence_item():

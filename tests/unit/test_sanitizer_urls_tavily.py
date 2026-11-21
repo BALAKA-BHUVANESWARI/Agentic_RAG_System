@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from copilot.search.sanitizer import find_sensitive, has_blocking_secret, redact_sensitive, sanitize_query
+from copilot.search.sanitizer import find_sensitive, has_blocking_secret, redact_credentials, redact_sensitive, sanitize_query
 from copilot.search.tavily_client import ExternalSearchError, TavilySearchClient
 from copilot.search.urls import domain_of, is_preferred_domain, validate_public_url
 
@@ -54,6 +54,15 @@ def test_redact_sensitive_only_masks_secrets():
     assert redact_sensitive("login with password: hunter2 please") == "login with [REDACTED] please"
     assert redact_sensitive("email me at a@b.com") == "email me at a@b.com"
     assert [f.kind for f in find_sensitive("a@b.com")] == ["email"]
+
+
+def test_redact_credentials_leaves_long_ids_and_urls_alone():
+    url = "https://www.businessinsider.com/microsoft-teams-has-worldwide-outage-2021-4?IR=T&r=US"
+    chunk_id = "e9dedc92d7347ec41418059ecb6e7c215401edbb55a23d5bb23cdfe4016d33f8:v1:2"
+    assert redact_credentials(url) == url and redact_credentials(chunk_id) == chunk_id
+    assert redact_credentials("login with password: hunter2 please") == "login with [REDACTED] please"
+    # the full rule set masks long runs, which is why audit uses the credential-only rule for generated text
+    assert redact_sensitive(url) != url and redact_sensitive(chunk_id) != chunk_id
 
 
 def test_url_validation():

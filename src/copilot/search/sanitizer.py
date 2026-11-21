@@ -80,6 +80,19 @@ def redact_sensitive(text: str) -> str:
     return text
 
 
+def redact_credentials(text: str) -> str:
+    """Mask credentials, API keys and bearer tokens, but NOT the long-token rule.
+
+    ``redact_sensitive`` also masks any run of 40 or more letters, digits, ``/``, ``_`` and ``-``.
+    That suits text a person typed, but it corrupts generated text and structured data, where such
+    runs are ordinary: chunk ids contain a 64-character hash and URL paths can be long.
+    """
+    for kind, severity, pattern in _PATTERNS:
+        if severity == "block" and kind != "long_secret":
+            text = pattern.sub("[REDACTED]", text)
+    return text
+
+
 def _truncate_at_word(text: str, max_chars: int) -> str:
     if len(text) <= max_chars:
         return text

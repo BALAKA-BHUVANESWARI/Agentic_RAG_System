@@ -394,3 +394,50 @@ def test_no_superseded_label_or_flag_when_the_evidence_is_all_current(make_agent
 
     blocks = re.findall(r"<evidence[^>]*>", h.llm.prompt("AnswerDraft", 0))  # the system prompt itself mentions the attribute
     assert blocks and not any("status=" in b for b in blocks) and "Outdated source" not in r.answer.rendered
+
+
+def _password_policy_refs(make_agent) -> tuple[int, int]:
+    """Evidence numbers of the current and the superseded password policy for ``_PW_Q``.
+
+    A probe run reads them from the prompt, so the tests do not depend on a guessed ranking
+    (the fake embedder is deterministic, so the numbering repeats in the real run).
+    """
+    import re
+
+    probe = _agent_for_password_question(make_agent, [answer_draft("probe [1]")], [OK_CHECK])
+    probe.agent.answer(_PW_Q)
+    prompt = probe.llm.prompt("AnswerDraft", 0)
+    cur = re.search(r'<evidence id="(\d+)"[^>]*source="Password_Policy.txt"', prompt)
+    old = re.search(r'<evidence id="(\d+)"[^>]*source="Password_Policy_Legacy_2022.txt"', prompt)
+    assert cur and old
+    return int(cur.group(1)), int(old.group(1))
+
+
+def test_current_versus_superseded_conflict_is_explained_by_the_label_not_judged_by_the_model(make_agent, kb):
+    """DEMO.md S5 (2026-11-21): the correct answer (current rule plus the older one, each cited) was rejected twice."""
+    cur, old = _password_policy_refs(make_agent)
+    strict = dict(grounded=True, conflicts_communicated=False)  # the model's verdict must not matter for this case
+    h = _agent_for_password_question(
+        make_agent, [answer_draft(f"The current policy requires 14 characters [{cur}]. The superseded 2022 policy required 8 characters [{old}].")], [strict])
+    r = h.agent.answer(_PW_Q)
+    assert not r.answer.abstained and r.path.count("answer_generator") == 1
+    assert "conflict_expected: false" in h.llm.prompt("GroundingCheck", 0)
+    assert "Outdated source:" in r.answer.rendered and "(superseded)" in r.answer.rendered
+    assert "14 characters" in r.answer.rendered and "8 characters" in r.answer.rendered
+    event = next(e for e in r.trace if e.node == "final_answer_validator")
+    assert event.data["conflict_explained_by_status"] is True and event.data["conflict_expected"] is False
+
+
+def test_answer_citing_only_the_current_document_is_still_sent_back_when_a_conflict_exists(make_agent, kb):
+    cur, old = _password_policy_refs(make_agent)
+    strict = dict(grounded=True, conflicts_communicated=False)
+    h = _agent_for_password_question(
+        make_agent,
+        [answer_draft(f"The minimum length is 14 characters [{cur}]."),
+         answer_draft(f"The current policy requires 14 characters [{cur}]. The superseded 2022 policy required 8 characters [{old}].")],
+        [strict, OK_CHECK])
+    r = h.agent.answer(_PW_Q)
+    assert "conflict_expected: true" in h.llm.prompt("GroundingCheck", 0)  # only the current document is cited: still judged
+    assert "conflict_expected: false" in h.llm.prompt("GroundingCheck", 1)  # the revision cites both: explained by the label
+    assert r.path.count("answer_generator") == 2 and not r.answer.abstained and "8 characters" in r.answer.rendered
+

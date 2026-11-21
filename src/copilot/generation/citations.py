@@ -39,6 +39,19 @@ def superseded_notice(citations: list[Citation]) -> str | None:
     return "Outdated source: " + "; ".join(parts) + ". It is cited only for the earlier rule, not as current policy."
 
 
+def conflict_explained_by_status(citations: list[Citation]) -> bool:
+    """True when the answer cites exactly ONE current document plus a superseded one.
+
+    A conflict between a current document and the older one it replaced is communicated by code:
+    ``superseded_notice`` and ``render_sources`` label the older source, so the reader is told which
+    value applies now. When two or more different current documents are cited, a conflict between
+    them is not explained by status, so the model's judgement is still needed.
+    """
+    private = [c for c in citations if c.kind == "private"]
+    current = {c.document_id or c.label for c in private if not c.superseded}
+    return len(current) == 1 and any(c.superseded for c in private)
+
+
 def render_sources(citations: list[Citation]) -> str:
     """Plain-text 'Sources' block built from real evidence (ASCII only)."""
     lines = ["Sources:"]
