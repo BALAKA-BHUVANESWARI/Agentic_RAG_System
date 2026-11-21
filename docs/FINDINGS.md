@@ -2,7 +2,7 @@
 
 A record of the problems found while building and testing the IT Support Copilot, how each was found, what caused it, and how it was fixed or left open. Every number below comes from a recorded run, a saved result file or the SQLite audit log, and each entry names its source. Documents are synthetic demo documents, so these findings say more about the engineering than about any real company's data.
 
-Short version: several defects were found by measurement (an evaluation metric, the system-health numbers, the audit log or a live demo) rather than by reading code, one experiment (a reranker) gave a negative result that was kept, and several claims are still **not** proven. The last section lists those.
+Short version: several defects were found by measurement (an evaluation metric, the system-health numbers, the audit log or a live demo) rather than by reading code, two experiments (a reranker and hybrid BM25 retrieval) gave negative results that were kept, and several claims are still **not** proven. The last section lists those.
 
 ---
 
@@ -64,6 +64,15 @@ Running every step of `docs/DEMO.md` with real services on 2026-11-21 found:
 Also fixed: abstentions now say *why* web search was not used and ask the user to change a password typed into the chat (abstentions only).
 
 - **Lesson.** Tests check what someone thought of. Running the whole system against realistic questions found four things nobody had thought of. None of the evaluation metrics measure the quality of an accepted source, which is why defect 4 was invisible to them.
+
+## 8. Hybrid retrieval (BM25 + dense) did not help, and the rule written first said so
+
+- **Setup.** Dense retrieval, BM25 alone and the two fused with Reciprocal Rank Fusion, compared on the 59 questions that name expected documents, retrieval only (no LLM or search calls). The hypothesis, the fixed parameters and the decision rule were written in [HYBRID_RETRIEVAL.md](HYBRID_RETRIEVAL.md) before the first run; nothing was tuned.
+- **Check on the harness.** The dense arm reproduced the committed retrieval baseline (largest difference 0.00005, rounding) and two runs gave byte-identical per-question files.
+- **Result.** The pre-registered outcome is `evidence_of_harm`: `doc_ndcg@5` fell from 0.885 to 0.825 (interval -0.104 to -0.021; 9 questions better, 23 worse). Document recall@5 was identical (0.983 both) and recall@1, recall@3 and MRR were not distinguishable from zero. No document metric was better in any subset. BM25 alone was worse than dense on recall@1, recall@3, MRR and `doc_ndcg@5`.
+- **What the metric means.** `doc_ndcg@5` measures how much of the top five chunks comes from the expected documents. Hybrid did not lose the right document; it let off-document chunks into the top five. One metric of five triggered the verdict and the five are correlated, so this is a modest finding stated as the rule gives it.
+- **Exploratory (post hoc, 10 questions).** The largest drops were all vague, symptom-style questions (`needs_rewriting`; mean -0.181 versus -0.013 for direct questions). Possible cause, **not tested**: little vocabulary overlap, so BM25 adds lexically matching noise.
+- **Status.** Hybrid retrieval is not adopted and the application is unchanged. A variant would be a new pre-registered experiment tuned on dev. The corpus is 11 short synthetic documents with dense retrieval near its ceiling, so this says little about a larger corpus. Source: `data/eval/results/hybrid_ab_20261122T000155`.
 
 ---
 

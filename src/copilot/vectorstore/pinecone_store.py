@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Iterator
 
 from copilot.config import Settings, get_settings
 from copilot.ingestion.models import Chunk
@@ -168,6 +168,27 @@ class PineconeStore:
             batch = ids[start : start + 500]
             self._retry("pinecone.delete", lambda b=batch: self.index.delete(ids=b, namespace=ns))
         return len(ids)
+
+    def iter_chunks(self, batch_size: int = 100) -> Iterator[RetrievedChunk]:
+        """Every chunk in this store's namespace with its stored text and metadata (``score`` is 0.0).
+
+        For offline experiments that need the whole corpus (docs/HYBRID_RETRIEVAL.md). It is not used on the request path
+        and it is NOT access-filtered: the caller must apply the role's access levels itself.
+        """
+        ns = self._settings.pinecone_namespace
+        ids: list[str] = []
+        for page in self.index.list(namespace=ns):
+            ids.extend(i for i in ((x if isinstance(x, str) else getattr(x, "id", None)) for x in page) if i)
+        for start in range(0, len(ids), batch_size):
+            batch = ids[start : start + batch_size]
+            response = self._retry("pinecone.fetch", lambda b=batch: self.index.fetch(ids=b, namespace=ns))
+            vectors = response["vectors"] if isinstance(response, dict) else response.vectors
+            for vec_id in batch:
+                vec = vectors.get(vec_id)
+                if vec is None:
+                    continue
+                metadata = vec.get("metadata") if isinstance(vec, dict) else getattr(vec, "metadata", None)
+                yield RetrievedChunk.from_match(vec_id, 0.0, dict(metadata or {}))
 
     def vector_count(self) -> int:
         """Number of vectors in this store's namespace."""

@@ -85,6 +85,10 @@ class FakeIndex:
         for start in range(0, len(ids), self.page_size):
             yield ids[start : start + self.page_size]
 
+    def fetch(self, ids: list[str], namespace: str | None = None) -> dict[str, Any]:
+        stored = self.data.get(namespace or "", {})
+        return {"vectors": {i: {"id": i, "values": stored[i][0], "metadata": stored[i][1]} for i in ids if i in stored}}
+
     def delete(self, ids: list[str], namespace: str | None = None) -> None:
         for i in ids:
             self.data.get(namespace or "", {}).pop(i, None)

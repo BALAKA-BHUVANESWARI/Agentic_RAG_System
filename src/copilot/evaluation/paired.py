@@ -61,6 +61,15 @@ PAIRED_METRICS: list[tuple[str, str, bool, Outcome]] = [
 MIN_CASES_FOR_VERDICT = 10
 
 
+def verdict_of(stat: dict[str, Any], higher_is_better: bool) -> str:
+    """``better`` / ``worse`` only when the interval excludes zero and at least ``MIN_CASES_FOR_VERDICT`` questions contribute."""
+    if stat["n"] < MIN_CASES_FOR_VERDICT:
+        return "too few questions"
+    if not stat["excludes_zero"]:
+        return "not distinguishable"
+    return "better" if (stat["diff"] > 0) == higher_is_better else "worse"
+
+
 def _by_case(results: Sequence[CaseResult]) -> dict[str, CaseResult]:
     return {r.case_id: r for r in results}
 
@@ -97,12 +106,7 @@ def paired_comparison(
         if not xs:
             continue
         stat = paired_bootstrap(xs, ys, resamples=resamples, seed=seed, confidence=confidence)
-        if stat["n"] < MIN_CASES_FOR_VERDICT:
-            verdict = "too few questions"
-        elif not stat["excludes_zero"]:
-            verdict = "not distinguishable"
-        else:
-            verdict = "better" if (stat["diff"] > 0) == higher else "worse"
+        verdict = verdict_of(stat, higher)
         metrics.append({
             "key": key, "label": label, "n": stat["n"], "before": sum(xs) / len(xs), "after": sum(ys) / len(ys),
             "diff": stat["diff"], "lo": stat["lo"], "hi": stat["hi"], "gained": stat["gained"], "lost": stat["lost"], "verdict": verdict,
