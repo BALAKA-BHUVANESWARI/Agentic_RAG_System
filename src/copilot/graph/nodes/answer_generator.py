@@ -6,17 +6,51 @@ from copilot.generation.evidence import from_retrieved_chunks
 from copilot.generation.models import EvidenceItem
 from copilot.graph.deps import GraphDeps
 from copilot.graph.nodes.common import event, traced, usage_update
+from copilot.config import Settings
 from copilot.graph.state import CopilotState
+from copilot.search.sanitizer import has_blocking_secret
 from copilot.vectorstore.models import RetrievedChunk
 
 
-def _missing_text(state: CopilotState) -> str:
+_PUBLIC_ANGLE = {"external_current", "both"}
+
+
+def _search_note(state: CopilotState, settings: Settings) -> str | None:
+    """One user-facing sentence on the web search, chosen from state flags (never from model or document text).
+
+    Silent for questions with no public-information angle: a web search was never an option for them.
+    """
+    if state.get("external_triggered"):
+        if str(state.get("external_blocked_reason") or "").startswith("search service unavailable"):
+            return "The public web search service was unavailable."
+        return "A public web search did not return a reliable, relevant source."
+    cls = state.get("classification") or {}
+    if cls.get("intent") not in _PUBLIC_ANGLE:
+        return None
+    if not settings.external_search_enabled:
+        return "Public web search is switched off, so no public source was checked."
+    if not state.get("external_search_allowed", True):
+        return "Public web search was turned off for this request, so no public source was checked."
+    if cls.get("contains_sensitive"):
+        return "Public web search was not used because your message appears to contain sensitive information."
+    if state.get("external_blocked_reason"):
+        return "No public web search was run because no safe, generic public query could be formed from your question."
+    return None
+
+
+def _credential_note(state: CopilotState) -> str | None:
+    """Tell the user to change a password or key they typed into the chat (pattern check on the question)."""
+    if has_blocking_secret(state.get("question", "")):
+        return "Your message seems to contain a password or secret; if it is real, please change it, because it was typed into this chat."
+    return None
+
+
+def _missing_text(state: CopilotState, settings: Settings) -> str:
     grade = state.get("private_grade") or {}
     parts = [m for m in grade.get("missing_information") or [] if m]
     text = "; ".join(parts) if parts else "the internal documents do not cover this question"
-    if state.get("external_triggered"):
-        text += ". A public web search did not return a reliable, relevant source."
-    return text
+    notes = [n for n in (_search_note(state, settings), _credential_note(state)) if n]
+    return text + (". " + " ".join(notes) if notes else "")
 
 
 def make_answer_generator(deps: GraphDeps):
@@ -50,7 +84,7 @@ def make_answer_generator(deps: GraphDeps):
             ))
 
         if not items:
-            ans = make_abstention("insufficient_evidence", missing=_missing_text(state), model=model)
+            ans = make_abstention("insufficient_evidence", missing=_missing_text(state, deps.settings), model=model)
             return {
                 "answer": ans.model_dump(), "evidence": [], "needs_revision": False,
                 "_event": event("no accepted evidence: abstaining", "abstain; recommend IT service desk",

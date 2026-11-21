@@ -4,6 +4,8 @@ A guided walkthrough that proves the whole system works, using the two reference
 
 > Demo documents are **synthetic, not real company policies**. The employee/admin selector is a **local demo, not authentication**.
 
+**Run of 2026-11-21:** the Observed columns below were filled from one live run on that day (reranker off, chunk cap off, `openai/gpt-oss-120b`, roughly 110,000 Groq tokens in total, including the re-checks). They are single runs on live services, so the wording and, for the Teams question, even the outcome (B3 and B4 come from two runs of the same question) change between runs. Four findings from this demo were fixed the same day: the audit record kept a typed password in its trace; the validator rejected a correct answer that cited a current and a superseded document; the external grader accepted a community Q&A thread; and an abstention did not say why web search had not been used.
+
 ## 0. Budget and preconditions
 
 - `.env` has valid `GROQ_API_KEY`, `PINECONE_API_KEY` and `TAVILY_API_KEY`.
@@ -52,11 +54,11 @@ Check:
 
 | # | What to verify | Observed |
 |---|---|---|
-| A1 | Path is exactly `query_classifier → private_retriever → private_evidence_grader → answer_generator → final_answer_validator → audit_logger` | |
-| A2 | No `external_search` node and `tavily_calls = 0` | |
-| A3 | Answer steps come from the VPN guide; citation names `VPN_Connection_Guide.txt` with a section | |
-| A4 | No external-information warning in the answer | |
-| A5 | Trace shows retrieved documents, grading (sufficient), validation passed, total time | |
+| A1 | Path is exactly `query_classifier → private_retriever → private_evidence_grader → answer_generator → final_answer_validator → audit_logger` | Pass (2026-11-21, request `a1ec1cb92e884475`): exactly that path. |
+| A2 | No `external_search` node and `tavily_calls = 0` | Pass: no `external_search` node, `tavily_calls=0`. |
+| A3 | Answer steps come from the VPN guide; citation names `VPN_Connection_Guide.txt` with a section | Pass: the six steps match section 3 of `VPN_Connection_Guide.txt` one for one; cited `[1] VPN_Connection_Guide.txt - section '3. Connecting from home'`. |
+| A4 | No external-information warning in the answer | Pass: no warning. |
+| A5 | Trace shows retrieved documents, grading (sufficient), validation passed, total time | Pass: 5 chunks retrieved, grader sufficient (0.98), validator grounded, 4,578 tokens, 21.5 s (the first retrieval includes loading the embedding model). |
 
 ## 3. Scenario B: private evidence insufficient, public information needed (Teams outage)
 
@@ -70,11 +72,11 @@ Check:
 
 | # | What to verify | Observed |
 |---|---|---|
-| B1 | Private retrieval and grading run first, then up to two `query_rewriter` retries, each followed by retrieval and grading | |
-| B2 | Only after the retries does `external_search` run, followed by `external_evidence_grader` | |
-| B3 | If an external source is accepted: the answer starts with the exact line `External information: This response uses public vendor information and may not represent your company's internal IT policy.` and cites a URL | |
-| B4 | If no external source is accepted: the system abstains, recommends the IT Service Desk, and the trace records why | |
-| B5 | The rewritten queries and the external search query appear in the trace; the external query contains no company names or identifiers | |
+| B1 | Private retrieval and grading run first, then up to two `query_rewriter` retries, each followed by retrieval and grading | Pass (CLI, `7eb3635f363a484f`): retrieval and grading, then two rewrites, each followed by retrieval and grading. |
+| B2 | Only after the retries does `external_search` run, followed by `external_evidence_grader` | Pass: `external_search` (2 Tavily calls: official domains first, then the wider web) and `external_evidence_grader` ran only after the second retry. |
+| B3 | If an external source is accepted: the answer starts with the exact line `External information: This response uses public vendor information and may not represent your company's internal IT policy.` and cites a URL | Seen in a different run of the same question (UI, `52740df2e78f401f`, 2026-11-21 20:17 IST): the answer started with the exact warning line and cited Microsoft Learn pages. That run also accepted a community Q&A thread, which was fixed afterwards. Re-run after the fix (CLI, `cb213d01ce49402f`, 21:18 IST): 1 of 5 results accepted, the official Microsoft Learn page on service health; the two Microsoft Q&A threads carry `community_page: True` and are rejected (the model had scored them low itself this time, so this run shows the check is wired in; the case where the model scores a forum page 1.0 is covered by a workflow test, not by this run); a status monitor and a 2023 news article were rejected as non-official or stale. Answer cited only the official page; 10,254 tokens, 34 s. |
+| B4 | If no external source is accepted: the system abstains, recommends the IT Service Desk, and the trace records why | Seen in the CLI run (2026-11-21 19:28 IST): 0 of 5 results accepted (news recaps and a forum thread); abstained, recommended the IT Service Desk, reason `insufficient_evidence` in the trace and the audit record. |
+| B5 | The rewritten queries and the external search query appear in the trace; the external query contains no company names or identifiers | Pass: external query `Microsoft Teams outage status` (UI run: `... and guidance`); the rewritten queries are in the trace; no company names or identifiers. |
 
 Live web results vary between runs, so B3 and B4 are both valid outcomes. What must never happen is an answer with no valid citation, or an unlabelled external answer.
 
@@ -82,13 +84,13 @@ Live web results vary between runs, so B3 and B4 are both valid outcomes. What m
 
 | # | Question / action | Expected | Observed |
 |---|---|---|---|
-| S1 | UI with **Allow public web search** unticked, ask the Teams question again | No `external_search` node; abstains and points to the IT Service Desk | |
-| S2 | `python scripts\ask_agent.py "What is the process to request a second monitor for my desk?"` | Company-specific and undocumented: retries, then abstains with **no** web search (regression check for the routing fix) | |
-| S3 | `python scripts\ask_agent.py "What's a good recipe for lasagna?"` | Out of scope: `query_classifier → answer_generator → final_answer_validator → audit_logger`, no retrieval, no search | |
-| S4 | Employee asks `How does the service desk verify a caller?`, then admin asks the same | Employee gets no restricted document (abstains); admin gets an answer citing `Service_Desk_Runbook.txt` | |
-| S5 | Ask `What is the minimum password length?` | States the current rule (14 characters) from `Password_Policy.txt`. If it also cites the 2022 policy, the answer starts with an `Outdated source:` line naming `Password_Policy.txt` as its replacement and the Sources list marks it `(superseded)` | |
-| S7 | Ask `What was the minimum password length in the 2022 edition of the password policy?` (needs the re-indexed legacy document, pre-flight step 1) | Answers 8 characters, cites `Password_Policy_Legacy_2022.txt`, and shows the `Outdated source:` line | |
-| S6 | Ask a question containing a fake secret, for example `my password is hunter2, why does Teams fail?` | Classified as sensitive; no web search; the secret is not stored in the audit record | |
+| S1 | UI with **Allow public web search** unticked, ask the Teams question again | No `external_search` node; abstains and points to the IT Service Desk | Pass on the path (CLI `--no-external`): same retry path as B without `external_search`; abstained. The text now says why (after a fix, CLI `42c2929daf2b44ca`): "Public web search was turned off for this request, so no public source was checked." 5,708 tokens. |
+| S2 | `python scripts\ask_agent.py "What is the process to request a second monitor for my desk?"` | Company-specific and undocumented: retries, then abstains with **no** web search (regression check for the routing fix) | Pass: two rewrites, abstained, `tavily_calls=0` (the first rewrite retrieved nothing above the 0.25 score floor). |
+| S3 | `python scripts\ask_agent.py "What's a good recipe for lasagna?"` | Out of scope: `query_classifier → answer_generator → final_answer_validator → audit_logger`, no retrieval, no search | Pass: classifier, answer_generator, validator, audit_logger; no retrieval, no search; 674 tokens. |
+| S4 | Employee asks `How does the service desk verify a caller?`, then admin asks the same | Employee gets no restricted document (abstains); admin gets an answer citing `Service_Desk_Runbook.txt` | Pass with a caveat: the employee got no restricted chunk (`dropped_unauthorized: 0`, the Pinecone filter) and an abstention (`validation_failed`: the grader judged weak chunks sufficient and the validator caught an unsupported claim); the admin got an answer from `Service_Desk_Runbook.txt` section 2. |
+| S5 | Ask `What is the minimum password length?` | States the current rule (14 characters) from `Password_Policy.txt`. If it also cites the 2022 policy, the answer starts with an `Outdated source:` line naming `Password_Policy.txt` as its replacement and the Sources list marks it `(superseded)` | First run FAILED (false abstention: the validator rejected the correct answer twice). Fixed 2026-11-21 (a conflict between one current and one superseded source is explained by the code-built label). Re-run: answered with 14 characters plus the 2022 value, `Outdated source:` line and `(superseded)` in Sources, after one revision. |
+| S7 | Ask `What was the minimum password length in the 2022 edition of the password policy?` (needs the re-indexed legacy document, pre-flight step 1) | Answers 8 characters, cites `Password_Policy_Legacy_2022.txt`, and shows the `Outdated source:` line | Pass: 8 characters, cites `Password_Policy_Legacy_2022.txt` section 2, with the `Outdated source:` line and `(superseded)` in Sources. |
+| S6 | Ask a question containing a fake secret, for example `my password is hunter2, why does Teams fail?` | Classified as sensitive; no web search; the secret is not stored in the audit record | Partly passed at first: classified sensitive (`password disclosed`) and no web search, but the typed password was stored in the audit `trace` (found and fixed 2026-11-21). Re-run: the audit row shows `[REDACTED]`. With a current-information question (`my password is hunter2, what is the latest Microsoft Teams outage guidance?`, CLI `6f6814ae6c674eff`): intent `both`, sensitive (`includes password`), no `external_search`, `tavily_calls=0`; the abstention now says that web search was not used because the message looks sensitive and asks the user to change the password if it is real. Limit: an answered request that contains a typed secret (the first S6 run) gets no such line, and the typed text still reaches the LLM provider. |
 
 ## 5. Audit, feedback and administration
 
@@ -103,7 +105,7 @@ Invoke-RestMethod -Uri "http://127.0.0.1:8000/audit/<request_id>" -Headers $h | 
    Expected: question, intent, retrieved document and chunk ids, rewritten query, grading, external flag and URLs, final answer, citations, validation result, execution time and the feedback you gave. No API keys.
 3. Switch the sidebar role to `admin`, open the **Admin** page:
    - **Documents** tab: 11 documents, including the two restricted ones. The `version status` column shows `Superseded by Password_Policy.txt` for `Password_Policy_Legacy_2022.txt` and `Current` for the rest (if the legacy policy shows `Current`, run `python scripts\ingest_kb.py` once; it repairs the record). Upload a small `.txt`, check its status becomes `indexed`, ask a question it answers, then delete it.
-   - **Audit** tab: the requests above are listed.
+   - **Audit** tab: a lookup form. Paste a Request ID and click **Look up** to see the same record as `GET /audit/<request_id>`; it does not list requests.
    - **Evaluation** tab: past runs, the baseline-vs-agentic dashboard, failed cases.
 
 ## 6. Record the results

@@ -12,6 +12,7 @@ from copilot.graph.state import CopilotState
 from copilot.llm.client import LLMUnavailableError, StructuredOutputError
 from copilot.llm.prompts import EXTERNAL_GRADER_SYSTEM_PROMPT
 from copilot.search.tavily_client import ExternalResult
+from copilot.search.urls import is_user_generated_path
 
 _NON_OFFICIAL_MIN_CREDIBILITY = 0.8
 
@@ -63,14 +64,21 @@ def make_external_evidence_grader(deps: GraphDeps):
         accepted, details = [], []
         for ref, r in enumerate(results, start=1):
             g = by_ref.get(ref)
+            # A community Q&A thread is written by users, whatever credibility the model gives it
+            # (it once scored a forum post 1.0). Decided by URL in code, not by the model.
+            community = is_user_generated_path(r.url, s.user_generated_url_markers)
             ok = bool(
-                g and g.accept and g.supports_answer and g.freshness != "stale"
+                not community
+                and g and g.accept and g.supports_answer and g.freshness != "stale"
                 and g.relevance >= s.external_evidence_threshold
                 and (r.preferred or g.credibility >= _NON_OFFICIAL_MIN_CREDIBILITY)
             )
-            details.append({"ref": ref, "url": r.url, "official": r.preferred, "accepted": ok,
+            reason = g.reason if g else "not graded"
+            if community:
+                reason = f"user-written community page, never accepted as evidence (grader said: {reason})"
+            details.append({"ref": ref, "url": r.url, "official": r.preferred, "community_page": community, "accepted": ok,
                             "relevance": g.relevance if g else None, "credibility": g.credibility if g else None,
-                            "freshness": g.freshness if g else None, "reason": g.reason if g else "not graded"})
+                            "freshness": g.freshness if g else None, "reason": reason})
             if ok:
                 accepted.append({**r.model_dump(), "grade": g.model_dump()})
         effective = bool(accepted) and grade.confidence >= s.external_evidence_threshold

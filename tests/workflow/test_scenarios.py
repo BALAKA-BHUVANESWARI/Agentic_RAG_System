@@ -441,3 +441,78 @@ def test_answer_citing_only_the_current_document_is_still_sent_back_when_a_confl
     assert "conflict_expected: false" in h.llm.prompt("GroundingCheck", 1)  # the revision cites both: explained by the label
     assert r.path.count("answer_generator") == 2 and not r.answer.abstained and "8 characters" in r.answer.rendered
 
+
+
+# ================================ Community pages and abstention wording (demo findings) ==============
+COMMUNITY_RESULT = ExternalResult(
+    title="Is there a Teams outage right now?",
+    url="https://learn.microsoft.com/en-us/answers/questions/6070730/is-there-a-teams-outage",
+    content="User question: if no ETA is shown, Microsoft has not published one yet.",
+    domain="learn.microsoft.com", preferred=False, score=0.8,
+)
+_GRADED_OK = dict(relevance=0.9, credibility=1.0, freshness="current", supports_answer=True, accept=True, reason="looks fine")
+
+
+def test_community_thread_is_rejected_even_when_the_model_scores_it_as_trustworthy(make_agent, kb):
+    """Demo finding: the grader once accepted a user-written Q&A thread (credibility 1.0). The URL decides, in code."""
+    both = dict(results=[dict(_GRADED_OK, ref=1, credibility=0.95), dict(_GRADED_OK, ref=2)], sufficient=True, confidence=0.9)
+    h = make_agent(search=FakeSearch([TEAMS_RESULT, COMMUNITY_RESULT]), settings_overrides={"max_rewrite_retries": 0},
+                   QueryClassification=[CLS_EXTERNAL], PrivateGrade=[GRADE_BAD], ExternalGrade=[both],
+                   AnswerDraft=[answer_draft("Check the service health page for current Teams incidents [1].")], GroundingCheck=[OK_CHECK])
+    r = h.agent.answer("What is the latest Microsoft Teams outage guidance?")
+    assert r.external_grade["accepted_refs"] == [1]
+    details = {d["ref"]: d for d in r.external_grade["details"]}
+    assert details[1]["accepted"] is True and details[1]["community_page"] is False
+    assert details[2]["accepted"] is False and details[2]["community_page"] is True and "community" in details[2]["reason"]
+    assert [c.url for c in r.answer.citations if c.kind == "external"] == [TEAMS_RESULT.url]
+    assert not r.answer.abstained and EXTERNAL_WARNING in r.answer.rendered
+
+
+def test_only_a_community_thread_found_means_abstention_not_an_answer_from_it(make_agent, kb):
+    only = dict(results=[dict(_GRADED_OK, ref=1)], sufficient=True, confidence=0.95)
+    h = make_agent(search=FakeSearch([COMMUNITY_RESULT]), settings_overrides={"max_rewrite_retries": 0},
+                   QueryClassification=[CLS_EXTERNAL], PrivateGrade=[GRADE_BAD], ExternalGrade=[only])
+    r = h.agent.answer("What is the latest Microsoft Teams outage guidance?")
+    assert r.answer.abstained and r.external_grade["accepted_refs"] == [] and r.external_grade["effective_sufficient"] is False
+    assert h.llm.count("AnswerDraft") == 0 and "IT Service Desk" in r.answer.rendered
+
+
+@pytest.mark.parametrize("how, expected, expect_credential_line", [
+    ("classifier_flag", "appears to contain sensitive information", False),
+    ("request_flag", "turned off for this request", False),
+    ("config_off", "is switched off", False),
+    ("secret_in_question", "appears to contain sensitive information", True),
+])
+def test_abstention_says_why_web_search_was_not_used(make_agent, kb, how, expected, expect_credential_line):
+    cls = dict(CLS_EXTERNAL, contains_sensitive=(how == "classifier_flag"))
+    overrides = {"max_rewrite_retries": 0, **({"external_search_enabled": False} if how == "config_off" else {})}
+    question = "my password is hunter2 what is the latest Teams outage guidance?" if how == "secret_in_question" else "What is the latest Teams outage guidance?"
+    h = make_agent(search=FakeSearch([TEAMS_RESULT]), settings_overrides=overrides, QueryClassification=[cls], PrivateGrade=[GRADE_BAD])
+    r = h.agent.answer(question, external_search_allowed=(how != "request_flag"))
+    text = r.answer.rendered
+    assert r.answer.abstained and expected in text and "IT Service Desk" in text
+    assert ("please change it" in text) is expect_credential_line
+    assert "hunter2" not in text and h.search.call_count == 0
+
+
+def test_internal_question_abstention_does_not_talk_about_web_search(make_agent, kb):
+    h = make_agent(settings_overrides={"max_rewrite_retries": 0}, QueryClassification=[CLS_INTERNAL],
+                   PrivateGrade=[dict(GRADE_BAD, recommended_action="abstain")])
+    r = h.agent.answer("Where is the secret server room located?", external_search_allowed=False)
+    assert r.answer.abstained and "web search" not in r.answer.rendered
+
+
+def test_typed_password_gets_a_change_it_line_even_for_an_internal_question(make_agent, kb):
+    h = make_agent(settings_overrides={"max_rewrite_retries": 0}, QueryClassification=[CLS_INTERNAL],
+                   PrivateGrade=[dict(GRADE_BAD, recommended_action="abstain")])
+    r = h.agent.answer("my password is hunter2, where is the secret server room located?")
+    assert r.answer.abstained and "please change it" in r.answer.rendered and "web search" not in r.answer.rendered
+    assert "hunter2" not in r.answer.rendered
+
+
+def test_search_outage_is_reported_as_an_outage_not_as_no_good_source(make_agent, kb):
+    h = make_agent(search=FakeSearch(error=ExternalSearchError("ConnectionError: down")), settings_overrides={"max_rewrite_retries": 0},
+                   QueryClassification=[CLS_EXTERNAL], PrivateGrade=[GRADE_BAD])
+    r = h.agent.answer("What is the latest Microsoft Teams outage guidance?")
+    assert r.answer.abstained and "search service was unavailable" in r.answer.rendered
+    assert "did not return a reliable" not in r.answer.rendered
