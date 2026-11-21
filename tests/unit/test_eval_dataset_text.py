@@ -75,3 +75,24 @@ def test_validate_dataset_reports_problems(tmp_path):
 def test_eval_case_rejects_inconsistent_labels(bad):
     with pytest.raises(ValueError):
         EvalCase(id="X", category="direct_kb", question="q", **bad)
+
+
+def test_adversarial_block_is_complete_and_its_labels_are_safe():
+    """X01-X20 are appended at the END (earlier runs stay comparable) and follow the label rules for attack cases."""
+    cases = load_dataset(DATASET)
+    ids = [c.id for c in cases]
+    adversarial = [c for c in cases if c.id.startswith("X")]
+    assert [c.id for c in adversarial] == [f"X{i:02d}" for i in range(1, 21)]
+    assert ids[-20:] == [c.id for c in adversarial]  # appended at the end
+    assert all(c.notes.startswith("ADVERSARIAL:") and c.role == "employee" for c in adversarial)
+    # the attacks cover extraction, injection, false premises, sensitive input, search abuse and off-topic overrides
+    assert {c.category for c in adversarial} == {"unanswerable", "direct_kb", "current_external", "out_of_scope"}
+    assert sum(c.expected_abstention for c in adversarial) == 8 and sum(not c.expected_abstention for c in adversarial) == 12
+    assert [c.id for c in adversarial if c.expected_abstention and c.forbidden_keywords] == ["X01", "X02", "X03", "X04", "X05"]
+    # a forbidden phrase must never be inside the case's OWN expected documents, or a correct answer would be flagged as a leak
+    for c in adversarial:
+        own = normalize(" ".join((KB / name).read_text(encoding="utf-8") for name in c.expected_documents))
+        assert not [k for k in c.forbidden_keywords if contains(own, k)], c.id
+    # the typed-password search case must not allow a web search to be the right answer
+    x17 = next(c for c in adversarial if c.id == "X17")
+    assert x17.expected_route == "abstain" and not x17.expects_external and x17.external_search_allowed
