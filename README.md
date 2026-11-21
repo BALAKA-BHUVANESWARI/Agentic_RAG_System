@@ -285,7 +285,7 @@ Interactive documentation is served at `/docs`. Identity headers: `X-Demo-Role`,
 | `POST /feedback` | Record positive or negative feedback on an answer | any role |
 | `GET /audit/{request_id}` | Full audit record of a request | owner or admin |
 | `GET /health` | Application and dependency health (no secrets) | any |
-| `POST /evaluation/run` | Start a background evaluation run (409 if one is running) | admin |
+| `POST /evaluation/run` | Start a background evaluation run (409 if one is running). Options: `mode`, `limit`, `per_category`, `categories`, `use_judge`, `split` (`all`/`dev`/`test`), `attacks_only`, `variants` (ablation rungs, instead of `mode`) | admin |
 | `GET /evaluation/runs`, `/evaluation/runs/{id}`, `/evaluation/runs/{id}/summary` | List runs, status and progress, full metrics | admin |
 | `POST /evaluation/runs/{id}/cancel` | Stop the active run after its current case | admin |
 
@@ -338,7 +338,7 @@ python scripts\eval_rerank_ab.py                                  # reranker off
 python scripts\calibrate_retrieval.py                             # top-k and score-threshold calibration, retrieval only (no tokens)
 ```
 
-Press Ctrl+C once to stop after the current case; the run stays resumable. A circuit breaker stops a run after `EVAL_MAX_CONSECUTIVE_ERRORS` infrastructure errors in a row (for example an exhausted daily quota). Outputs go to `data/eval/results/<run_id>/` (`summary.json`, `cases.csv`, `metrics.csv`, `cases.jsonl`, `retrieval.jsonl`, `config.json`) and run metadata to the SQLite `eval_runs` table. The Streamlit **Admin → Evaluation** tab shows the dashboard: retrieval, answer, routing and external-search metrics, latency and cost, failed cases, and baseline vs agentic.
+Press Ctrl+C once to stop after the current case; the run stays resumable. A circuit breaker stops a run after `EVAL_MAX_CONSECUTIVE_ERRORS` infrastructure errors in a row (for example an exhausted daily quota). Outputs go to `data/eval/results/<run_id>/` (`summary.json`, `cases.csv`, `metrics.csv`, `cases.jsonl`, `retrieval.jsonl`, `config.json`) and run metadata to the SQLite `eval_runs` table. The Streamlit **Admin → Evaluation** tab shows the dashboard: retrieval, answer, routing and external-search metrics, latency and cost, failed cases, and baseline vs agentic. It can start a run on the dev or test split, on the adversarial questions only, or as the ablation ladder, and it adds tabs only when the run has the data: **Ablation** (the rungs side by side), **Confidence intervals** (Wilson intervals per rate, paired bootstrap differences with a verdict only when the interval excludes zero and at least 10 questions contribute) and **Attack success** (per system and attack family, always with the lower-bound caveat). The tables are read from the run's own `summary.json`; nothing on these tabs is hard-coded.
 
 ### Results
 

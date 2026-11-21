@@ -26,6 +26,7 @@ def run_evaluation(body: EvaluationRunRequest, principal: Principal = Depends(re
     service = _service(svc)
     opts = RunOptions(
         mode=body.mode, limit=body.limit, per_category=body.per_category, categories=body.categories, use_judge=body.use_judge,
+        split=body.split, attacks_only=body.attacks_only, variants=body.variants,
         run_id=body.resume_run_id, resume=body.resume_run_id is not None,
     )
     try:

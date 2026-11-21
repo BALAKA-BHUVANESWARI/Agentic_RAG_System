@@ -12,11 +12,13 @@ import time
 import streamlit as st
 
 from copilot.config import Settings
+from copilot.evaluation import variants as variant_registry
 from copilot.evaluation.schemas import CATEGORIES
 from copilot.ui import eval_formatting as ef
 from copilot.ui.api_client import ApiError, CopilotClient
 
 _LEVELS = {"info": st.info, "success": st.success, "warning": st.warning, "error": st.error}
+ABLATION_CHOICE = "ablation ladder"
 
 
 def _banner(level: str, text: str) -> None:
@@ -48,25 +50,38 @@ def _summary_for(client: CopilotClient, run: dict) -> dict | None:
 def _controls(client: CopilotClient, runs: list[dict], active: dict | None) -> None:
     st.markdown("#### Start a run")
     c1, c2, c3 = st.columns(3)
-    mode = c1.selectbox("Systems", ["both", "agentic", "baseline"], key="eval_mode", help="'both' runs the baseline RAG and the agentic workflow on the same questions.")
+    mode = c1.selectbox(
+        "Systems", ["both", "agentic", "baseline", ABLATION_CHOICE], key="eval_mode",
+        help="'both' runs the baseline RAG and the agentic workflow on the same questions. 'ablation ladder' runs six systems, each adding one agent step to the one before.",
+    )
     per_cat = c2.number_input("Questions per category (0 = all)", min_value=0, max_value=100, value=1, step=1, key="eval_per_category")
     limit = c3.number_input("Max questions (0 = no limit)", min_value=0, max_value=1000, value=0, step=1, key="eval_limit")
     categories = st.multiselect("Categories", list(CATEGORIES), default=list(CATEGORIES), key="eval_categories")
+    s1, s2 = st.columns(2)
+    split = s1.selectbox("Question set", ["all", "dev", "test"], key="eval_split", help="Frozen dev/test split of the labelled questions (docs/EVAL_SPLIT.md): tune on dev, report test.")
+    attacks_only = s2.checkbox("Adversarial questions only (X01-X20)", value=False, key="eval_attacks_only", help="Runs only the attack questions and adds an attack-success tab.")
     use_judge = st.checkbox("Also run the LLM judge (faithfulness and relevance; uses extra tokens)", value=False, key="eval_judge")
 
     per_cat_v, limit_v = per_cat or None, limit or None
     cats_v = categories if categories and set(categories) != set(CATEGORIES) else None
     ref = ef.latest_completed(runs)
     ref_summary = _summary_for(client, ref) if ref else None
-    estimate = ef.estimate_tokens(ref_summary, ef.selected_question_count(per_cat_v, limit_v, categories or None), mode, use_judge)
-    if estimate:
+    ablation = mode == ABLATION_CHOICE
+    n_selected = ef.selected_question_count(per_cat_v, limit_v, categories or None)
+    estimate = None if ablation else ef.estimate_tokens(ref_summary, n_selected, mode, use_judge)
+    if ablation:
+        st.caption(ef.ablation_run_note(n_selected))
+    elif estimate:
         st.caption(f"Rough token need: up to about {estimate:,}, scaled from run {ref['run_id']}. Free provider tiers have daily token limits.")
     else:
         st.caption("Real calls to Groq, Pinecone and Tavily. A full run can use a large share of a free daily token limit; try a small run first.")
 
     if st.button("Start evaluation", key="eval_start", disabled=active is not None or not categories):
         try:
-            info = client.start_evaluation(mode=mode, limit=limit_v, per_category=per_cat_v, categories=cats_v, use_judge=use_judge)
+            info = client.start_evaluation(
+                mode="both" if ablation else mode, variants=list(variant_registry.NAMES) if ablation else None, limit=limit_v,
+                per_category=per_cat_v, categories=cats_v, use_judge=use_judge, split=split, attacks_only=attacks_only,
+            )
         except ApiError as exc:
             (st.warning if exc.status_code == 409 else st.error)(exc.detail)
         else:
@@ -179,6 +194,44 @@ def _comparison_tab(summary: dict) -> None:
         st.caption("Each category has only a few questions, so single-category differences are very noisy.")
 
 
+def _ablation_tab(summary: dict) -> None:
+    st.caption("Each system adds one agent step to the one before it. The routing rules (private first, web search only when allowed) are the same in every rung.")
+    _table(ef.ladder_rows(summary))
+    st.markdown("**What each system runs**")
+    _table(ef.ladder_legend(summary))
+    st.markdown("**Reading the steps**")
+    for line in ef.ladder_findings(summary):
+        st.write(f"- {line}")
+    if ef.has_intervals(summary):
+        st.caption("Whether a step is distinguishable from noise is on the Confidence intervals tab.")
+
+
+def _intervals_tab(summary: dict) -> None:
+    _banner(*ef.intervals_verdict(summary))
+    st.caption(ef.intervals_note(summary))
+    st.markdown("**Each system's rates with an interval**")
+    _table(ef.interval_rows(summary))
+    paired = ef.paired_rows(summary)
+    if paired:
+        st.markdown("**Paired differences between systems (same questions)**")
+        st.caption("'better on' and 'worse on' count questions where the later system did better or worse than the earlier one. A verdict is given only when the interval excludes zero and at least 10 questions contribute.")
+        _table(paired)
+
+
+def _attacks_tab(summary: dict) -> None:
+    for level, text in ef.attack_banners(summary):
+        _banner(level, text)
+    _table(ef.attack_rows(summary))
+    st.markdown("**By attack family** (succeeded / judged)")
+    _table(ef.attack_family_rows(summary))
+    won = ef.attack_succeeded_rows(summary)
+    if won:
+        st.markdown("**Attacks that tripped a detector**")
+        _table(won)
+    else:
+        st.success("No attack tripped a detector in this run.")
+
+
 def _failed_tab(summary: dict) -> None:
     cases = summary.get("failed_cases") or []
     if not cases:
@@ -216,21 +269,24 @@ def _results(client: CopilotClient, runs: list[dict]) -> None:
         else:
             st.info("No results were recorded for this run: it ended before any question finished. Resume it above, or pick another run.")
         return
-    tabs = st.tabs(["Overview", "Retrieval", "Answer quality", "Routing & external search", "Latency & cost", "Baseline vs agentic", "Failed cases"])
-    with tabs[0]:
-        _overview_tab(run, summary)
-    with tabs[1]:
-        _retrieval_tab(summary)
-    with tabs[2]:
-        _answer_tab(summary)
-    with tabs[3]:
-        _routing_tab(summary)
-    with tabs[4]:
-        _system_tab(summary)
-    with tabs[5]:
-        _comparison_tab(summary)
-    with tabs[6]:
-        _failed_tab(summary)
+    sections = [
+        ("Overview", lambda: _overview_tab(run, summary)),
+        ("Retrieval", lambda: _retrieval_tab(summary)),
+        ("Answer quality", lambda: _answer_tab(summary)),
+        ("Routing & external search", lambda: _routing_tab(summary)),
+        ("Latency & cost", lambda: _system_tab(summary)),
+        ("Baseline vs agentic", lambda: _comparison_tab(summary)),
+    ]
+    if ef.has_ablation(summary):
+        sections.append(("Ablation", lambda: _ablation_tab(summary)))
+    if ef.has_intervals(summary):
+        sections.append(("Confidence intervals", lambda: _intervals_tab(summary)))
+    if ef.has_attacks(summary):
+        sections.append(("Attack success", lambda: _attacks_tab(summary)))
+    sections.append(("Failed cases", lambda: _failed_tab(summary)))
+    for tab, (_, draw) in zip(st.tabs([name for name, _ in sections]), sections):
+        with tab:
+            draw()
     with st.expander("Run history"):
         _table(ef.run_rows(runs))
 

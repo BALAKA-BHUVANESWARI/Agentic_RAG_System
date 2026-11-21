@@ -53,12 +53,12 @@ def chat_api(api):
 def eval_api(api, embedder, tmp_path):
     """Factory: API with a real EvaluationService over stub systems. Returns (ns, service)."""
 
-    def _build(agent=None, baseline=None):
+    def _build(agent=None, baseline=None, agent_factory=None):
         ns = api()
         s = ns.h.settings.model_copy(update={"eval_dir": tmp_path / "eval", "eval_dataset_path": write_dataset(tmp_path / "ds.json")})
         runner = EvaluationRunner(
             s, agent=agent or StubAgent(), baseline=baseline or StubBaseline(), retriever=Retriever(s, embedder=embedder, store=ns.h.store),
-            validate=False, sleep=lambda _s: None,
+            validate=False, sleep=lambda _s: None, agent_factory=agent_factory,
         )
         service = EvaluationService(runner, EvalRunStore(s.sqlite_path))
         ns.svc.evaluation_runner = service

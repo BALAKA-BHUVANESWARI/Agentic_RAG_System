@@ -76,6 +76,18 @@ def test_employees_cannot_use_the_evaluation_endpoints(eval_api):
     assert exc.value.status_code == 403
 
 
+def test_client_sends_the_dashboard_options_and_surfaces_their_validation_errors(eval_api):
+    ns, service = eval_api(agent_factory=lambda overrides: StubAgent())
+    c = client_for(ns)
+    with pytest.raises(ApiError) as bad:
+        c.start_evaluation(variants=["bogus"])
+    assert bad.value.status_code == 422 and "variants" in bad.value.detail
+    info = c.start_evaluation(variants=["baseline", "grade"], use_judge=False)
+    assert info["total"] == 6                                          # 3 questions x 2 rungs
+    service.wait(20)
+    assert list(c.evaluation_summary(info["run_id"])["modes"]) == ["baseline", "grade"]
+
+
 # ------------------------------------------------------------------------------ dashboard
 def test_evaluation_tab_without_a_backend_suite_explains_it(admin_app, api):
     at = admin_app(api(load_kb=False))
@@ -150,3 +162,43 @@ def test_failed_cases_are_listed_with_their_answers(admin_app, eval_api):
     text = _messages(at)
     assert not at.exception and "Stopped" in text and "failed or incorrect case" in text          # 3 errors in a row stop the run
     assert any("agentic" in e.label and "error" in e.label for e in at.expander)
+
+
+def test_the_run_controls_offer_the_new_options_with_safe_defaults(admin_app, eval_api):
+    ns, _ = eval_api()
+    at = admin_app(ns)
+    assert at.selectbox(key="eval_split").value == "all" and at.checkbox(key="eval_attacks_only").value is False
+    assert "ablation ladder" in at.selectbox(key="eval_mode").options and at.selectbox(key="eval_mode").value == "both"
+
+
+def test_the_ablation_choice_explains_its_size_and_surfaces_a_runner_that_cannot_run_it(admin_app, eval_api):
+    ns, _ = eval_api()                                                 # no agent factory, like a runner built without scripts/run_eval.py's wiring
+    at = admin_app(ns)
+    at.selectbox(key="eval_mode").select("ablation ladder").run()
+    assert "runs the whole ladder" in _messages(at)
+    at.button(key="eval_start").click().run()
+    assert not at.exception and any("agent factory" in e.value for e in at.error)
+
+
+def test_choosing_a_split_that_does_not_match_the_dataset_shows_the_runner_error(admin_app, eval_api):
+    ns, _ = eval_api()
+    at = admin_app(ns)
+    at.selectbox(key="eval_split").select("test").run()
+    at.button(key="eval_start").click().run()
+    assert not at.exception and any("split" in e.value.lower() for e in at.error)
+
+
+def test_an_ablation_run_adds_its_tabs_and_reads_no_winner_into_three_questions(admin_app, eval_api):
+    ns, service = eval_api(agent_factory=lambda overrides: StubAgent())
+    at = admin_app(ns)
+    at.session_state["eval_pause_refresh"] = True                      # the test drives refreshes itself
+    at.selectbox(key="eval_mode").select("ablation ladder").run()
+    at.button(key="eval_start").click().run()
+    assert not at.exception
+    service.wait(20)
+    at.run()
+    assert not at.exception
+    labels = " ".join(t.label for t in at.tabs)
+    assert "Ablation" in labels and "Confidence intervals" in labels and "Attack success" not in labels      # no adversarial question in this dataset
+    assert "Too few questions for an interval to mean anything" in _messages(at)
+    assert any("+ evidence grader" in list(d.value.columns) for d in at.dataframe)                            # one column per rung

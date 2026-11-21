@@ -55,6 +55,10 @@ metric with a better / worse / tie verdict), `summary.json -> variants` (the exa
 scopes in `metrics.csv`. The terminal summary prints one column per rung and a short findings list built from the
 numbers only.
 
+The same run can be started from the dashboard (**Admin → Evaluation → Systems → ablation ladder**). The **Ablation** tab
+shows the rungs side by side with what each one runs, and the **Confidence intervals** tab shows which steps are
+distinguishable from noise. Both tabs appear only for runs that carry that data.
+
 ## How to read the result (and what not to claim)
 
 * The step table's **tie / better / worse** uses a quick display rule (a rate moved by less than 2 points, or a count

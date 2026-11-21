@@ -27,6 +27,13 @@ def test_request_validation(eval_api):
     assert post({"categories": ["out_of_scope"]}).status_code == 400            # valid category, but no case in the tiny dataset
     assert post({"resume_run_id": "../x"}).status_code == 400
     assert post({"resume_run_id": "never-ran"}).status_code == 400
+    # dashboard options: bad values are rejected by the schema, valid ones reach the runner and fail there for honest reasons
+    assert post({"split": "bogus"}).status_code == 422
+    assert post({"variants": ["bogus"]}).status_code == 422
+    assert post({"variants": ["grade"], "mode": "agentic"}).status_code == 422          # `mode` or `variants`, not both
+    assert post({"variants": ["grade"]}).status_code == 400                             # valid rung, but this runner has no agent factory
+    assert post({"attacks_only": True}).status_code == 400                              # the tiny dataset has no adversarial question
+    assert post({"split": "test"}).status_code == 400                                   # the real split file does not match the tiny dataset
 
 
 def test_start_poll_and_read_results(eval_api):
@@ -90,3 +97,14 @@ def test_a_run_left_running_by_a_dead_process_is_reported_as_interrupted(eval_ap
     ns, service = eval_api()
     service._store.start_run("ghost", "both", "ds.json", 3, {})      # a row nobody is working on
     assert ns.client.get("/evaluation/runs/ghost", headers=ADM).json()["status"] == "interrupted"
+
+
+def test_an_ablation_run_started_through_the_api_returns_the_ladder(eval_api):
+    ns, service = eval_api(agent_factory=lambda overrides: StubAgent())
+    r = ns.client.post("/evaluation/run", json={"variants": ["agentic", "baseline", "grade"], "use_judge": False}, headers=ADM)
+    assert r.status_code == 202 and r.json()["total"] == 9                              # 3 questions x 3 rungs
+    service.wait(20)
+    summary = ns.client.get(f"/evaluation/runs/{r.json()['run_id']}/summary", headers=ADM).json()
+    assert summary["options"]["variants"] == ["baseline", "grade", "agentic"]           # ladder order, whatever order was sent
+    assert list(summary["modes"]) == ["baseline", "grade", "agentic"]
+    assert summary["ablation"]["order"] == ["baseline", "grade", "agentic"] and summary["intervals"]["paired"]

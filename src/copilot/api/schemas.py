@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from copilot.audit.logger import AuditRecord
 
@@ -182,6 +182,9 @@ class EvaluationRunRequest(BaseModel):
     limit: int | None = Field(default=None, ge=1, description="Run only the first N cases (after the other filters).")
     per_category: int | None = Field(default=None, ge=1, description="Run only the first N cases of each category.")
     categories: list[str] | None = None
+    variants: list[str] | None = Field(default=None, description="Ablation ladder rungs to run instead of `mode` (baseline, classify, grade, rewrite, external, agentic).")
+    split: Literal["all", "dev", "test"] = Field(default="all", description="Frozen dev/test split of the dataset (docs/EVAL_SPLIT.md).")
+    attacks_only: bool = Field(default=False, description="Only the adversarial questions (X01-X20).")
     use_judge: bool = Field(default=True, description="Also run the LLM judge (faithfulness / relevance). Costs extra tokens.")
     resume_run_id: str | None = Field(default=None, max_length=64, description="Resume this earlier run (its saved options are reused).")
 
@@ -194,6 +197,19 @@ class EvaluationRunRequest(BaseModel):
         if bad:
             raise ValueError(f"unknown categories {bad}; valid: {CATEGORIES}")
         return v
+
+    @field_validator("variants")
+    @classmethod
+    def _known_variants(cls, v: list[str] | None) -> list[str] | None:
+        from copilot.evaluation.variants import normalise
+
+        return normalise(v) if v else None
+
+    @model_validator(mode="after")
+    def _mode_or_variants(self) -> "EvaluationRunRequest":
+        if self.variants and self.mode != "both":
+            raise ValueError("use either `mode` or `variants`, not both")
+        return self
 
 
 class EvaluationRunInfo(BaseModel):

@@ -35,7 +35,7 @@ python scripts\run_eval.py --split test                      # report this
 python scripts\calibrate_retrieval.py --split dev            # threshold tuning stays on dev
 ```
 
-`run_eval.py --split` writes the split name into the run's `summary.json` and notes; a test-split run says so in its
+The dashboard has the same choice (**Admin → Evaluation → Question set**). `run_eval.py --split` writes the split name into the run's `summary.json` and notes; a test-split run says so in its
 notes. `calibrate_retrieval.py`, `eval_rerank_ab.py` and `diagnose_rerank.py` default to `all` (their published numbers
 were computed on all cases), so pass `--split dev` when tuning from now on.
 

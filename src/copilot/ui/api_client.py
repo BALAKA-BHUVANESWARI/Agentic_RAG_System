@@ -103,9 +103,13 @@ class CopilotClient:
     def start_evaluation(
         self, *, mode: str = "both", limit: int | None = None, per_category: int | None = None,
         categories: list[str] | None = None, use_judge: bool = True, resume_run_id: str | None = None,
+        split: str = "all", attacks_only: bool = False, variants: list[str] | None = None,
     ) -> dict:
         """POST /evaluation/run. Returns at once with the run's status; poll :meth:`evaluation_status`."""
-        body = {"mode": mode, "limit": limit, "per_category": per_category, "categories": categories, "use_judge": use_judge, "resume_run_id": resume_run_id}
+        body = {
+            "mode": mode, "limit": limit, "per_category": per_category, "categories": categories, "use_judge": use_judge,
+            "resume_run_id": resume_run_id, "split": split, "attacks_only": attacks_only, "variants": variants,
+        }
         return self._request("POST", "/evaluation/run", json=body)
 
     def list_evaluation_runs(self, limit: int = 20) -> list[dict]:

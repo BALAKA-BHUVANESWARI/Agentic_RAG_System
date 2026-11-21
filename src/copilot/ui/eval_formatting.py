@@ -9,6 +9,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from copilot.evaluation import variants as variant_registry
+from copilot.evaluation.aggregate import ABLATION_METRICS
+from copilot.evaluation.attacks import FAMILIES
+from copilot.evaluation.paired import PAIRED_METRICS
 from copilot.evaluation.schemas import CATEGORIES
 from copilot.ui.formatting import format_ms
 
@@ -19,6 +23,29 @@ RESUMABLE = frozenset({"cancelled", "stopped", "failed", "interrupted"})
 SMALL_SAMPLE = 30  # fewer labelled questions than this per system: treat differences as noise
 
 NA = "n/a"
+
+
+# ------------------------------------------------------------------------------ which systems a run has
+def systems_in(summary: dict) -> list[str]:
+    """Systems that have results, in display order: ladder order (baseline first, full agent last), then any others."""
+    present = [m for m, block in (summary.get("modes") or {}).items() if block]
+    ladder = [n for n in variant_registry.NAMES if n in present]
+    return ladder + [m for m in present if m not in ladder]
+
+
+def table_systems(summary: dict) -> list[str]:
+    """Columns for the side-by-side tables: every rung of an ablation run, otherwise always the two classic systems (missing values show n/a)."""
+    return systems_in(summary) if summary.get("variants") else list(MODES)
+
+
+def system_label(summary: dict, mode: str) -> str:
+    """Display name. In an ablation run a rung is named by what it adds to the one before it."""
+    if summary.get("variants"):
+        try:
+            return variant_registry.get_variant(mode).label
+        except ValueError:
+            return mode
+    return MODE_LABEL.get(mode, mode)
 
 
 # ------------------------------------------------------------------------------ number formatting
@@ -149,6 +176,13 @@ def selected_question_count(per_category: int | None, limit: int | None, categor
     return n
 
 
+def ablation_run_note(n_questions: int | None) -> str:
+    """Caption for the 'ablation ladder' choice: it runs every rung on every selected question."""
+    rungs = len(variant_registry.NAMES)
+    scope = f"{n_questions} question(s) x {rungs} systems = up to {n_questions * rungs} question runs" if n_questions else f"every selected question on all {rungs} systems"
+    return f"An ablation runs the whole ladder: {scope}. Real calls to Groq, Pinecone and Tavily; start with a small selection."
+
+
 def estimate_tokens(summary: dict | None, n_questions: int | None, mode: str, use_judge: bool) -> int | None:
     """Rough token need of a run, scaled from an earlier run's measured usage. None when it cannot be estimated."""
     if not summary or not n_questions:
@@ -181,10 +215,15 @@ def overview(summary: dict) -> dict[str, str]:
         scope.append(f"first {opts['limit']}")
     if opts.get("categories"):
         scope.append(", ".join(opts["categories"]))
+    if opts.get("attacks_only"):
+        scope.append("adversarial questions only")
+    if (opts.get("split") or "all") != "all":
+        scope.append(f"{opts['split']} split")
+    systems = " → ".join(systems_in(summary)) if summary.get("variants") else str(opts.get("mode", "both"))
     return {
         "Model": f"{s.get('llm_model', '?')} (reasoning: {s.get('reasoning_effort') or 'default'})",
         "Questions": f"{n_cases(summary)} ({'; '.join(scope) or 'whole dataset'})",
-        "Systems": str(opts.get("mode", "both")),
+        "Systems": systems or str(opts.get("mode", "both")),
         "Question runs ok": f"{prog.get('units_ok', 0)}/{prog.get('units_total', 0)}",
         "Duration": duration_text(summary.get("started_at"), summary.get("finished_at")),
         "LLM judge": "on" if (summary.get("judge") or {}).get("enabled") else "off",
@@ -200,9 +239,9 @@ def caveats(summary: dict) -> list[tuple[str, str]]:
     missing = (prog.get("units_total") or 0) - (prog.get("units_ok") or 0)
     if missing > 0:
         out.append(("warning", f"{missing} question run(s) did not finish without an error. Failed requests count as incorrect, so they lower the scores."))
-    present = [m for m in MODES if (summary.get("modes") or {}).get(m)]
+    present = systems_in(summary)
     if len(present) == 1:
-        out.append(("info", f"Only the {MODE_LABEL[present[0]]} has results, so there is no comparison."))
+        out.append(("info", f"Only the {system_label(summary, present[0])} has results, so there is no comparison."))
     n = n_cases(summary)
     if 0 < n < SMALL_SAMPLE:
         out.append(("info", f"Only {n} labelled questions per system: differences of a few points are noise. Repeat runs before drawing conclusions."))
@@ -223,6 +262,8 @@ def comparison_verdict(summary: dict) -> tuple[str, str]:
     """(level, text) on whether the comparison supports a conclusion. Never says the agentic system is better unless the data do and the sample is large enough."""
     comp = summary.get("comparison")
     if not comp:
+        if summary.get("variants"):
+            return "info", "This ablation run does not include both the baseline and the full agentic workflow, so there is no baseline-vs-agentic comparison. See the Ablation tab."
         return "info", "No comparison: this run has results for only one system."
     n = n_cases(summary)
     better_a, better_b = comp.get("agentic_better") or [], comp.get("baseline_better") or []
@@ -289,7 +330,7 @@ def answer_rows(summary: dict) -> list[dict]:
     """Answer-quality metrics, baseline next to agentic."""
     rows = []
     for key, label, kind in _ANSWER_METRICS:
-        rows.append({"metric": label, **{MODE_LABEL[m]: _cell(kind, (_mode(summary, m).get("answer") or {}).get(key)) for m in MODES}})
+        rows.append({"metric": label, **{system_label(summary, m): _cell(kind, (_mode(summary, m).get("answer") or {}).get(key)) for m in table_systems(summary)}})
     return rows
 
 
@@ -344,9 +385,9 @@ def system_rows(summary: dict) -> list[dict]:
     rows = []
     for label, key, fmt in specs:
         row = {"metric": label}
-        for m in MODES:
+        for m in table_systems(summary):
             value = (_mode(summary, m).get("system") or {}).get(key)
-            row[MODE_LABEL[m]] = NA if value is None else fmt(value)
+            row[system_label(summary, m)] = NA if value is None else fmt(value)
         rows.append(row)
     return rows
 
@@ -369,12 +410,12 @@ def comparison_findings(summary: dict) -> list[str]:
 def category_rows(summary: dict) -> list[dict]:
     """Overall-correct rate per question category, both systems."""
     cats: list[str] = []
-    for m in MODES:
+    for m in table_systems(summary):
         for c in (_mode(summary, m).get("by_category") or {}):
             if c not in cats:
                 cats.append(c)
     return [
-        {"category": c, **{MODE_LABEL[m]: rate_text((_mode(summary, m).get("by_category") or {}).get(c)) for m in MODES}}
+        {"category": c, **{system_label(summary, m): rate_text((_mode(summary, m).get("by_category") or {}).get(c)) for m in table_systems(summary)}}
         for c in cats
     ]
 
@@ -383,9 +424,9 @@ def category_chart(summary: dict) -> dict[str, list]:
     """Chart data (percent correct per category) as lists; None marks a missing value."""
     rows = category_rows(summary)
     data: dict[str, list] = {"category": [r["category"] for r in rows]}
-    for m in MODES:
+    for m in table_systems(summary):
         by_cat = _mode(summary, m).get("by_category") or {}
-        data[MODE_LABEL[m]] = [None if not by_cat.get(r["category"], {}).get("den") else round(by_cat[r["category"]]["value"] * 100, 1) for r in rows]
+        data[system_label(summary, m)] = [None if not by_cat.get(r["category"], {}).get("den") else round(by_cat[r["category"]]["value"] * 100, 1) for r in rows]
     return data
 
 
@@ -401,3 +442,214 @@ def failed_rows(summary: dict) -> list[dict]:
 def failed_case_title(case: dict) -> str:
     """Expander title for one failed case."""
     return f"{case['case_id']} · {case['mode']} · {case['outcome']}"
+
+
+# ------------------------------------------------------------------------------ ablation ladder
+def has_ablation(summary: dict) -> bool:
+    """True when the run compared ablation rungs (it has an ``ablation`` block)."""
+    return bool(summary.get("ablation"))
+
+
+def _ladder_value(key: str, value: Any) -> str:
+    if value is None:
+        return NA
+    if isinstance(value, dict):
+        return rate_text(value)
+    if key.endswith("_ms"):
+        return format_ms(value)
+    return count_text(value)
+
+
+def ladder_rows(summary: dict) -> list[dict]:
+    """The ablation ladder: one row per metric, one column per rung (each rung is named by what it adds)."""
+    rows = (summary.get("ablation") or {}).get("rows") or []
+    if not rows:
+        return []
+    return [
+        {"metric": label, **{r["label"]: _ladder_value(key, (r.get("metrics") or {}).get(key)) for r in rows}}
+        for key, label, _, _ in ABLATION_METRICS
+    ]
+
+
+def ladder_legend(summary: dict) -> list[dict]:
+    """What each rung switches on, so the table headers can be read without the docs."""
+    out = []
+    for name in systems_in(summary):
+        try:
+            v = variant_registry.get_variant(name)
+        except ValueError:
+            continue
+        out.append({"system": name, "label": v.label, "what it runs": v.description})
+    return out
+
+
+def ladder_findings(summary: dict) -> list[str]:
+    """The plain-language findings produced with the ablation table (built from the numbers by the evaluator)."""
+    return list((summary.get("ablation") or {}).get("findings") or [])
+
+
+# ------------------------------------------------------------------------------ confidence intervals
+def has_intervals(summary: dict) -> bool:
+    """True when the run carries an ``intervals`` block."""
+    return bool(summary.get("intervals"))
+
+
+def interval_range(entry: dict | None) -> str:
+    """'15–54%' for an entry with an interval, else an empty string."""
+    if not entry or entry.get("lo") is None or entry.get("hi") is None:
+        return ""
+    return f"{entry['lo'] * 100:.0f}–{entry['hi'] * 100:.0f}%"
+
+
+def interval_text(entry: dict | None) -> str:
+    """``{value, num, den, lo, hi}`` -> '67% (16/24) [47–83%]'; the interval is left out when it was not computed."""
+    if not entry or not entry.get("den"):
+        return NA
+    text = f"{pct(entry.get('value'))} ({entry['num']}/{entry['den']})"
+    rng = interval_range(entry)
+    return f"{text} [{rng}]" if rng else text
+
+
+def interval_rows(summary: dict) -> list[dict]:
+    """Each headline rate with its Wilson interval, one column per system."""
+    rates = (summary.get("intervals") or {}).get("rates") or {}
+    systems = [m for m in systems_in(summary) if rates.get(m)]
+    keys = [(k, label) for k, label, _, _ in PAIRED_METRICS if any(k in rates[m] for m in systems)]
+    return [{"metric": label, **{system_label(summary, m): interval_text(rates[m].get(k)) for m in systems}} for k, label in keys]
+
+
+def _signed_points(value: float | None) -> str:
+    return NA if value is None else f"{value * 100:+.0f}"
+
+
+_HIGHER_IS_BETTER = {key: higher for key, _, higher, _ in PAIRED_METRICS}
+
+
+def paired_rows(summary: dict) -> list[dict]:
+    """Per-question paired differences between systems that answered the same questions.
+
+    ``better on`` / ``worse on`` count questions where the later system did better / worse than the earlier one,
+    already corrected for metrics where lower is better (hallucinations, false abstentions).
+    """
+    rows = []
+    for pair in (summary.get("intervals") or {}).get("paired") or []:
+        for m in pair.get("metrics") or []:
+            higher = _HIGHER_IS_BETTER.get(m["key"], True)
+            better_on, worse_on = (m["gained"], m["lost"]) if higher else (m["lost"], m["gained"])
+            rows.append({
+                "comparison": f"{pair['from']} → {pair['to']}", "metric": m["label"], "questions": m["n"],
+                "before": pct(m.get("before")), "after": pct(m.get("after")),
+                "difference (points)": _signed_points(m.get("diff")),
+                "interval (points)": f"[{_signed_points(m.get('lo'))}, {_signed_points(m.get('hi'))}]" if m.get("lo") is not None else NA,
+                "better on": better_on, "worse on": worse_on, "verdict": m.get("verdict", ""),
+            })
+    return rows
+
+
+def intervals_note(summary: dict) -> str:
+    """How the intervals were computed and what they do not cover."""
+    iv = summary.get("intervals") or {}
+    if not iv:
+        return ""
+    return (f"{pct(iv.get('confidence'))} intervals. Rates: Wilson score. Differences: paired bootstrap over questions "
+            f"({iv.get('resamples', 0):,} resamples, seed {iv.get('seed')}). {iv.get('caveat') or ''}").strip()
+
+
+def intervals_verdict(summary: dict) -> tuple[str, str]:
+    """(level, text) on what the paired intervals support. Never names a winner; says so when the sample is too small."""
+    iv = summary.get("intervals")
+    if not iv:
+        return "info", "No interval data in this run."
+    metrics = [m for p in iv.get("paired") or [] for m in p.get("metrics") or []]
+    if not metrics:
+        return "info", "This run has a single system, so there is no paired comparison. The per-system intervals are shown below."
+    verdicts = [m.get("verdict") for m in metrics]
+    decided = [v for v in verdicts if v in ("better", "worse")]
+    if all(v == "too few questions" for v in verdicts):
+        return "warning", "Too few questions for an interval to mean anything. Run more questions before reading any difference."
+    if not decided:
+        return "info", f"No paired difference is distinguishable from zero at {pct(iv.get('confidence'))}: with this many questions the data cannot separate the systems."
+    return "info", (f"{len(decided)} of {len(metrics)} paired differences have an interval that excludes zero "
+                    f"({verdicts.count('better')} better, {verdicts.count('worse')} worse). That says the questions in this dataset favour one system, not that repeat runs would agree.")
+
+
+# ------------------------------------------------------------------------------ attack success
+_FLAG_COLUMN = {
+    "leak": "leaked restricted content", "answered_when_should_abstain": "answered instead of refusing", "unwanted_web_search": "unwanted web search",
+}
+
+
+def has_attacks(summary: dict) -> bool:
+    """True when the run contained adversarial questions."""
+    return bool((summary.get("attacks") or {}).get("modes"))
+
+
+def _attack_modes(summary: dict) -> list[str]:
+    modes = (summary.get("attacks") or {}).get("modes") or {}
+    return [m for m in systems_in(summary) if m in modes]
+
+
+def attack_rows(summary: dict) -> list[dict]:
+    """One row per system: how many attacks were judged, how many succeeded (with an interval) and which detector fired."""
+    at = summary.get("attacks") or {}
+    flags = list((at.get("flags") or _FLAG_COLUMN))
+    rows = []
+    for m in _attack_modes(summary):
+        b = at["modes"][m]
+        rows.append({
+            "system": system_label(summary, m), "attacks": b["attacks"], "judged": b["judged"], "not judged (errors)": b["not_judged_errors"],
+            "succeeded": b["succeeded"], "attack success": interval_text(b.get("asr")),
+            **{_FLAG_COLUMN.get(f, f): (b.get("by_flag") or {}).get(f, 0) for f in flags},
+            "held, answer incorrect": b.get("held_but_incorrect", 0),
+        })
+    return rows
+
+
+def attack_family_rows(summary: dict) -> list[dict]:
+    """Succeeded/judged per attack family and system."""
+    modes = (summary.get("attacks") or {}).get("modes") or {}
+    systems = _attack_modes(summary)
+    order = [k for k, _, _, _ in FAMILIES] + ["other"]
+    present = [k for k in order if any(k in (modes[m].get("by_family") or {}) for m in systems)]
+    rows = []
+    for key in present:
+        label = next((modes[m]["by_family"][key]["label"] for m in systems if key in (modes[m].get("by_family") or {})), key)
+        row = {"attack family": label}
+        for m in systems:
+            fam = (modes[m].get("by_family") or {}).get(key)
+            row[system_label(summary, m)] = f"{fam['succeeded']}/{fam['judged']}" if fam else NA
+        rows.append(row)
+    return rows
+
+
+def attack_succeeded_rows(summary: dict) -> list[dict]:
+    """Every attack that tripped a detector, with the system, family and what was detected."""
+    at = summary.get("attacks") or {}
+    descriptions = at.get("flags") or {}
+    labels = {k: label for k, label, _, _ in FAMILIES} | {"other": "Other adversarial cases"}
+    return [
+        {"system": system_label(summary, m), "case": c["case_id"], "family": labels.get(c.get("family"), c.get("family")),
+         "detected": "; ".join(descriptions.get(f, f) for f in c.get("flags") or []), "question": c.get("question", "")}
+        for m in _attack_modes(summary) for c in at["modes"][m].get("succeeded_cases") or []
+    ]
+
+
+def attack_banners(summary: dict) -> list[tuple[str, str]]:
+    """(level, text) lines: one per system, then the lower-bound caveat. Wording follows the counts; it never says a system is 'secure'."""
+    at = summary.get("attacks") or {}
+    out: list[tuple[str, str]] = []
+    for m in _attack_modes(summary):
+        b = at["modes"][m]
+        name = system_label(summary, m)
+        if not b["judged"]:
+            out.append(("warning", f"{name}: none of the {b['attacks']} attacks could be judged (service errors)."))
+            continue
+        rng = interval_range(b.get("asr"))
+        rate_part = pct(b["asr"].get("value")) + (f", {pct(at.get('confidence'))} interval {rng}" if rng else "")
+        text = f"{name}: {b['succeeded']} of {b['judged']} judged attacks tripped a detector ({rate_part})."
+        if b["not_judged_errors"]:
+            text += f" {b['not_judged_errors']} more could not be judged because the service failed."
+        out.append(("warning" if b["succeeded"] else "info", text))
+    if at.get("caveat"):
+        out.append(("info", at["caveat"]))
+    return out
