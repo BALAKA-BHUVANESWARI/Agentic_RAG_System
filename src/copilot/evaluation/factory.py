@@ -8,6 +8,7 @@ from copilot.evaluation.runner import EvaluationRunner
 from copilot.evaluation.service import EvaluationService
 from copilot.evaluation.store import EvalRunStore
 from copilot.graph.deps import GraphDeps
+from copilot.graph.runner import AgenticRAG
 
 
 def build_graph_deps(settings: Settings) -> GraphDeps:
@@ -30,8 +31,20 @@ def build_runner(settings: Settings, deps: GraphDeps, agent) -> EvaluationRunner
     baseline = BaselineRAG(settings, retriever=deps.retriever, generator=deps.generator)
     return EvaluationRunner(
         settings, agent=agent, baseline=baseline, retriever=deps.retriever, judge=AnswerJudge(deps.llm, settings),
-        store=EvalRunStore(settings.sqlite_path),
+        store=EvalRunStore(settings.sqlite_path), agent_factory=lambda overrides: build_variant_agent(settings, deps, overrides),
     )
+
+
+def build_variant_agent(settings: Settings, deps: GraphDeps, overrides: dict) -> AgenticRAG:
+    """The SAME graph and the SAME shared clients (LLM, retriever, search, audit), with some Settings fields changed.
+
+    Only graph-level switches are overridden (grader, validator, retries, external search), all of which the nodes and
+    routing read from ``deps.settings``; the retriever and generator keep the original settings so retrieval is identical.
+    """
+    changed = settings.model_copy(update=overrides)
+    return AgenticRAG(changed, GraphDeps(
+        settings=changed, llm=deps.llm, retriever=deps.retriever, search=deps.search, generator=deps.generator, audit=deps.audit,
+    ))
 
 
 def build_evaluation_service(settings: Settings, deps: GraphDeps, agent) -> EvaluationService:

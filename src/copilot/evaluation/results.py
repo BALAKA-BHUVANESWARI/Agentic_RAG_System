@@ -1,7 +1,7 @@
 """Per-case result records (JSON-serialisable; written to disk as the run progresses)."""
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -38,7 +38,7 @@ class CaseResult(BaseModel):
 
     case_id: str
     category: str
-    mode: Literal["baseline", "agentic"]
+    mode: str = Field(min_length=1, description="System that answered: 'baseline', 'agentic' (the full agent) or an ablation variant name.")
     question: str
     role: str = "employee"
     request_id: str | None = None

@@ -33,6 +33,7 @@ from copilot.embeddings.service import get_embedding_service  # noqa: E402
 from copilot.evaluation.results import RetrievedItem  # noqa: E402
 from copilot.evaluation.retrieval_metrics import chunk_is_relevant, score_retrieval  # noqa: E402
 from copilot.evaluation.schemas import load_dataset  # noqa: E402
+from copilot.evaluation.split import filter_cases  # noqa: E402
 from copilot.logging_config import setup_logging  # noqa: E402
 from copilot.vectorstore.pinecone_store import PineconeStore  # noqa: E402
 from copilot.vectorstore.retriever import Retriever  # noqa: E402
@@ -85,13 +86,14 @@ def label(c) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--cases", nargs="*", default=None, help="only these case ids")
+    parser.add_argument("--split", choices=["all", "dev", "test"], default="all", help="frozen split to use; tune on dev, not test")
     parser.add_argument("--alphas", nargs="*", type=float, default=[0.25, 0.5, 0.75],
                         help="cosine weight in the blends (0 = cross-encoder only, 1 = cosine only)")
     args = parser.parse_args()
     setup_logging(level="WARNING")
 
     base = get_settings()
-    cases = [c for c in load_dataset(base.eval_dataset_path) if c.expected_documents]
+    cases = [c for c in filter_cases(load_dataset(base.eval_dataset_path), args.split, base.eval_split_path) if c.expected_documents]
     if args.cases:
         cases = [c for c in cases if c.id in set(args.cases)]
     on = base.model_copy(update={"rerank_enabled": True, "rerank_candidates": max(base.rerank_candidates, base.eval_retrieval_pool)})

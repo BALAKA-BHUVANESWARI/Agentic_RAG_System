@@ -56,8 +56,8 @@ def score_answer(case: EvalCase, r: CaseResult, *, answer_threshold: float = 0.6
 
 
 def routing_outcomes(case: EvalCase, r: CaseResult) -> dict[str, Any]:
-    """Workflow-level outcomes. Only the agentic system has a route, so baseline results return {}."""
-    if r.mode != "agentic":
+    """Workflow-level outcomes. Only the agent (any variant) has a route, so baseline results return {}."""
+    if r.mode == "baseline":
         return {}
     retr = r.path.index("private_retriever") if "private_retriever" in r.path else None
     ext = r.path.index("external_search") if "external_search" in r.path else None

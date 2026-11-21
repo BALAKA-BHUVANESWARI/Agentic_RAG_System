@@ -20,6 +20,7 @@ clearly wrong, not to tune to single cases. The threshold is a cheap first filte
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 import time
@@ -32,6 +33,7 @@ from copilot.embeddings.service import get_embedding_service  # noqa: E402
 from copilot.evaluation.results import RetrievedItem  # noqa: E402
 from copilot.evaluation.retrieval_metrics import chunk_is_relevant, score_retrieval  # noqa: E402
 from copilot.evaluation.schemas import load_dataset  # noqa: E402
+from copilot.evaluation.split import filter_cases  # noqa: E402
 from copilot.logging_config import setup_logging  # noqa: E402
 from copilot.vectorstore.pinecone_store import PineconeStore  # noqa: E402
 from copilot.vectorstore.retriever import Retriever  # noqa: E402
@@ -59,13 +61,16 @@ def fmt(v: float | None, spec: str = ".3f") -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--split", choices=["all", "dev", "test"], default="all", help="frozen split to calibrate on; tune thresholds on dev, not test")
+    args = parser.parse_args()
     setup_logging(level="WARNING")
     s = get_settings()
     off = s.model_copy(update={"rerank_enabled": False})
     embedder, store = get_embedding_service(), PineconeStore(s)
     retriever = Retriever(off, embedder=embedder, store=store)
-    cases = load_dataset(s.eval_dataset_path)
-    print(f"{len(cases)} cases; pool={s.eval_retrieval_pool}; current RETRIEVAL_TOP_K={s.retrieval_top_k}, RETRIEVAL_MIN_SCORE={s.retrieval_min_score}")
+    cases = filter_cases(load_dataset(s.eval_dataset_path), args.split, s.eval_split_path)
+    print(f"{len(cases)} cases [{args.split} split]; pool={s.eval_retrieval_pool}; current RETRIEVAL_TOP_K={s.retrieval_top_k}, RETRIEVAL_MIN_SCORE={s.retrieval_min_score}")
 
     ranked: dict[str, list[RetrievedItem]] = {}
     for c in cases:

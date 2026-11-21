@@ -26,6 +26,7 @@ from copilot.evaluation.aggregate import summarize_retrieval  # noqa: E402
 from copilot.evaluation.results import RetrievalCaseResult, RetrievedItem  # noqa: E402
 from copilot.evaluation.retrieval_metrics import score_retrieval  # noqa: E402
 from copilot.evaluation.schemas import load_dataset  # noqa: E402
+from copilot.evaluation.split import filter_cases  # noqa: E402
 from copilot.logging_config import setup_logging  # noqa: E402
 from copilot.vectorstore.pinecone_store import PineconeStore  # noqa: E402
 from copilot.vectorstore.retriever import Retriever  # noqa: E402
@@ -48,11 +49,12 @@ def run_arm(name: str, retriever: Retriever, cases, settings) -> dict[str, Retri
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--categories", nargs="*", default=None, help="only these categories")
+    parser.add_argument("--split", choices=["all", "dev", "test"], default="all", help="frozen split to use; tune on dev, not test")
     args = parser.parse_args()
     setup_logging(level="WARNING")
 
     base = get_settings()
-    cases = [c for c in load_dataset(base.eval_dataset_path) if c.expected_documents]
+    cases = [c for c in filter_cases(load_dataset(base.eval_dataset_path), args.split, base.eval_split_path) if c.expected_documents]
     if args.categories:
         cases = [c for c in cases if c.category in args.categories]
     print(f"{len(cases)} cases with expected documents; pool={base.eval_retrieval_pool}, rerank_candidates={base.rerank_candidates}")

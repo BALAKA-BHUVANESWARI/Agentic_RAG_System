@@ -57,19 +57,21 @@ def from_baseline(case: EvalCase, resp) -> tuple[CaseResult, GeneratedAnswer, li
     return result, ans, evidence
 
 
-def from_agentic(case: EvalCase, resp) -> tuple[CaseResult, GeneratedAnswer, list[EvidenceItem]]:
-    """Map an ``AgenticResponse``."""
+def from_agentic(case: EvalCase, resp, mode: str = "agentic") -> tuple[CaseResult, GeneratedAnswer, list[EvidenceItem]]:
+    """Map an ``AgenticResponse``. ``mode`` is the system name recorded on the result (the full agent or an ablation variant)."""
     ans = resp.answer
     error = _error_for(ans, resp.error)
     grade = resp.private_grade or {}
     # The decision the graph acted on (LLM verdict AND threshold AND valid support), not the raw LLM flag.
-    grade_sufficient = None if (error or not grade) else bool(grade.get("effective_sufficient", grade.get("sufficient")))
+    # A skipped grader (ablation) made no decision, so it must not be scored as a grading decision.
+    graded = bool(grade) and not grade.get("skipped")
+    grade_sufficient = None if (error or not graded) else bool(grade.get("effective_sufficient", grade.get("sufficient")))
     validation = resp.validation or {}
     result = CaseResult(
-        case_id=case.id, category=case.category, mode="agentic", question=case.question, role=case.role,
+        case_id=case.id, category=case.category, mode=mode, question=case.question, role=case.role,
         request_id=resp.request_id, path=list(resp.path), external_triggered=resp.external_search_triggered,
         tavily_calls=resp.tavily_calls, retry_count=resp.retry_count, rewritten_queries=list(resp.rewritten_queries),
-        grade_sufficient=grade_sufficient, grade_confidence=None if error or not grade else grade.get("confidence"),
+        grade_sufficient=grade_sufficient, grade_confidence=None if error or not graded else grade.get("confidence"),
         validation_passed=validation.get("passed") if validation else None, latency_ms=resp.latency_ms,
         prompt_tokens=resp.llm_usage.prompt_tokens, completion_tokens=resp.llm_usage.completion_tokens,
         llm_calls=resp.llm_usage.calls, error=error, **_answer_fields(ans),
@@ -80,6 +82,6 @@ def from_agentic(case: EvalCase, resp) -> tuple[CaseResult, GeneratedAnswer, lis
 def error_result(case: EvalCase, mode: str, exc: BaseException, latency_ms: float) -> CaseResult:
     """A result for a request that raised (recorded as an error; the run continues)."""
     return CaseResult(
-        case_id=case.id, category=case.category, mode=mode, question=case.question, role=case.role,  # type: ignore[arg-type]
+        case_id=case.id, category=case.category, mode=mode, question=case.question, role=case.role,
         latency_ms=latency_ms, error=redact(f"{type(exc).__name__}: {exc}")[:300],
     )

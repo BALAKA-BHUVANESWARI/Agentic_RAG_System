@@ -46,7 +46,7 @@ def test_the_image_contains_no_secrets_and_runs_as_a_normal_user():
     assert re.search(r"^USER app$", text, re.M) and "useradd" in text            # not root
     assert "download.pytorch.org/whl/cpu" in text                                # CPU-only PyTorch (no CUDA download)
     assert "SentenceTransformer(" in text                                         # embedding model baked in
-    assert "COPY data/kb_documents" in text and "COPY data/eval/dataset.json" in text
+    assert "COPY data/kb_documents" in text and "COPY data/eval/dataset.json" in text and "COPY data/eval/split.json" in text
 
 
 def test_dockerignore_keeps_secrets_environments_and_runtime_data_out():

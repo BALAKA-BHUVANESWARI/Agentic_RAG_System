@@ -73,7 +73,7 @@ def summarize_mode(cases: list[EvalCase], results: list[CaseResult], settings: S
         "answer_relevance_mean": mean(r.scores.get("answer_relevance") for c, r in items),
     }
 
-    agentic = [(c, r) for c, r in items if r.mode == "agentic"]
+    agentic = [(c, r) for c, r in items if r.mode != "baseline"]  # the full agent or any ablation variant
     routing: dict[str, Any] = {}
     if agentic:
         not_ext = [(c, r) for c, r in agentic if not c.expects_external]
@@ -162,3 +162,53 @@ def compare_modes(baseline: dict[str, Any], agentic: dict[str, Any], tolerance: 
         "These are single-run results on a small labelled set; treat differences of a few points as noise until repeated.",
     ]
     return {"rows": rows, "findings": notes, "agentic_better": better, "baseline_better": worse, "tied": tied}
+
+
+# Metrics shown in the ablation table: (key, label, section of the mode summary, higher_is_better)
+ABLATION_METRICS: list[tuple[str, str, str, bool]] = [
+    ("overall_correct_rate", "Overall correct", "answer", True),
+    ("answer_correct_rate", "Answerable questions correct", "answer", True),
+    ("correct_abstention_rate", "Correct abstentions", "answer", True),
+    ("hallucinated_answer_rate", "Hallucinated answers", "answer", False),
+    ("false_abstention_rate", "False abstentions", "answer", False),
+    ("citation_correct_rate", "Citations correct", "answer", True),
+    ("restricted_content_leaks", "Restricted-content leaks", "answer", False),
+    ("latency_avg_ms", "Average latency (ms)", "system", False),
+    ("total_tokens", "Total tokens", "system", False),
+    ("tavily_calls", "Tavily calls", "system", False),
+]
+
+
+def ablation_table(modes: dict[str, dict[str, Any]], order: list[str], labels: dict[str, str], tolerance: float = 0.02) -> dict[str, Any]:
+    """One row per system variant (in ladder order) and, for each step, how every metric moved from the previous rung.
+
+    A rate is "tie" when it moved by less than ``tolerance`` (absolute); a count or average when it moved by less than 5%.
+    Findings are built from the numbers only. No significance test is run: read ``den`` before concluding.
+    """
+    present = [m for m in order if m in modes]
+    rows = [
+        {"variant": m, "label": labels.get(m, m), "n_cases": modes[m]["system"]["n_cases"],
+         "metrics": {key: modes[m][section].get(key) for key, _, section, _ in ABLATION_METRICS}}
+        for m in present
+    ]
+    steps: list[dict[str, Any]] = []
+    for prev, cur in zip(present, present[1:]):
+        changes = []
+        for key, label, section, higher in ABLATION_METRICS:
+            before_raw, after_raw = modes[prev][section].get(key), modes[cur][section].get(key)
+            before, after = _value(before_raw), _value(after_raw)
+            if before is None or after is None:
+                continue
+            delta = after - before
+            is_rate = isinstance(after_raw, dict)
+            small = abs(delta) < tolerance if is_rate else abs(delta) <= 0.05 * max(abs(before), abs(after), 1e-9)
+            verdict = "tie" if small else ("better" if (delta > 0) == higher else "worse")
+            changes.append({"metric": label, "key": key, "before": before, "after": after, "delta": delta, "verdict": verdict})
+        steps.append({"from": prev, "to": cur, "added": labels.get(cur, cur), "changes": changes})
+    findings = []
+    for st in steps:
+        better = [c["metric"] for c in st["changes"] if c["verdict"] == "better"]
+        worse = [c["metric"] for c in st["changes"] if c["verdict"] == "worse"]
+        findings.append(f"{st['added']}: better on {len(better)} ({', '.join(better) or 'none'}); worse on {len(worse)} ({', '.join(worse) or 'none'}).")
+    findings.append("Each rung is one run on a small labelled set; gaps of a few points can be noise. Repeat runs or add confidence intervals before quoting a step as real.")
+    return {"order": present, "rows": rows, "steps": steps, "findings": findings}

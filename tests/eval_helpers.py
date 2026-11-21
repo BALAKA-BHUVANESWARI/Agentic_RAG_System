@@ -92,6 +92,13 @@ def default_agentic(question: str) -> AgenticResponse:
     )
 
 
+def grade_rung_stub(question: str) -> AgenticResponse:
+    """Stand-in for an ablation rung without web search: correct, except the public-information question is abstained."""
+    if question == EXTERNAL_Q:
+        return agentic_response(question, make_abstention("insufficient_evidence"), private_grade={"effective_sufficient": False, "confidence": 0.8}, evidence=[])
+    return default_agentic(question)
+
+
 def default_baseline(question: str) -> RAGResponse:
     """Baseline behaviour: answers the VPN question, hallucinates an answer to the unanswerable one, cannot answer the external one."""
     if question == VPN_Q:

@@ -304,7 +304,7 @@ Interactive documentation is served at `/docs`. Identity headers: `X-Demo-Role`,
 
 Evaluation is a first-class part of the project and lives in `src/copilot/evaluation/`.
 
-**Dataset:** `data/eval/dataset.json` has 93 labelled questions in 8 categories: direct internal, paraphrased, needs query rewriting, insufficient private evidence, current external information, conflicting documents, unanswerable, out of scope. Each case has the question, the role, the expected route, expected documents, expected answer points, expected citations, whether abstention is expected, and whether external search is allowed. `--validate-only` checks every label against the knowledge base. The last 20 cases (ids `X01` to `X20`) are an **adversarial block**: an employee trying to extract the restricted runbook or administrator procedure (instruction overrides, fake system messages, authority claims, obfuscation), instructions injected into a legitimate question (delimiter breaking, SQL-style and markup payloads), false premises and pressure to agree (for example the superseded 8-character password rule), a typed password next to a question, a user demanding a web search, and off-topic override attempts. They are scored with the same checks as the other cases (abstention, forbidden-keyword leaks, unnecessary web search); they have not been run yet, so no attack-success rate is reported.
+**Dataset:** `data/eval/dataset.json` has 93 labelled questions in 8 categories: direct internal, paraphrased, needs query rewriting, insufficient private evidence, current external information, conflicting documents, unanswerable, out of scope. Each case has the question, the role, the expected route, expected documents, expected answer points, expected citations, whether abstention is expected, and whether external search is allowed. `--validate-only` checks every label against the knowledge base. The last 20 cases (ids `X01` to `X20`) are an **adversarial block**: an employee trying to extract the restricted runbook or administrator procedure (instruction overrides, fake system messages, authority claims, obfuscation), instructions injected into a legitimate question (delimiter breaking, SQL-style and markup payloads), false premises and pressure to agree (for example the superseded 8-character password rule), a typed password next to a question, a user demanding a web search, and off-topic override attempts. They are scored with the same checks as the other cases (abstention, forbidden-keyword leaks, unnecessary web search); they have not been run yet, so no attack-success rate is reported. Every run that includes them now writes an `attacks` block to `summary.json` and the terminal summary: the share of the 20 attacks that succeeded per system (leaked forbidden content, answered a question that should be refused, or made an unwanted web search), by attack family, with a Wilson interval and the successful attacks listed. It is a **lower bound**: it only sees what those three detectors can see, and 20 attacks written by the system's author show regressions, not robustness against a determined attacker.
 
 **Metrics:**
 
@@ -315,6 +315,12 @@ Evaluation is a first-class part of the project and lives in `src/copilot/evalua
 
 **Baseline comparison:** the baseline (retrieve then generate) and the agentic workflow run on the same questions, roles and corpus, case by case. Service outages are recorded as errors, never as correct abstentions.
 
+**Dev/test split:** `data/eval/split.json` freezes 65 dev and 28 test cases (stratified by category, assigned by a salted hash, never recomputed). Tune and look at failures on dev (`--split dev`); run `--split test` to report a number and do not change the system because of individual test failures. The test split is less contaminated, not unseen, because every question was visible during development; the honest next step is a block of fresh questions written after the freeze. See [docs/EVAL_SPLIT.md](docs/EVAL_SPLIT.md).
+
+**Uncertainty:** every run's `summary.json` has an `intervals` block: a Wilson 95% interval for each headline rate, and for each pair of systems (baseline vs agentic, and each ablation step) the number of questions that flipped each way plus a paired-bootstrap interval for the difference. A difference is called better or worse only when its interval excludes zero and at least 10 questions contribute. The intervals cover which questions were asked, not LLM sampling noise between repeated runs (`src/copilot/evaluation/stats.py` and `paired.py`; tests in `tests/unit/test_eval_stats.py`).
+
+**Ablation study (built, not yet run):** `--variants` runs a ladder of systems that adds one agent step at a time (`baseline`, `classify`, `grade`, `rewrite`, `external`, `agentic`) so the effect of each step can be read from the step table instead of guessed. The rungs are the same graph with settings switches (`AGENT_USE_GRADER`, `AGENT_USE_VALIDATOR`, retries, external search), all defaulting to the full workflow. No ablation results are reported because none have been produced; see [docs/ABLATION.md](docs/ABLATION.md) for the ladder, the cost, and how to read the result.
+
 **Running it** (each question costs Groq tokens; the free tier has per-minute and per-day limits):
 
 ```powershell
@@ -323,6 +329,11 @@ python scripts\run_eval.py --per-category 1 --no-judge --delay 10  # small smoke
 python scripts\run_eval.py --per-category 3 --delay 5              # larger run with the judge
 python scripts\run_eval.py --list-runs
 python scripts\run_eval.py --resume <run_id>                       # continue an interrupted or stopped run
+python scripts\run_eval.py --list-variants                         # the ablation ladder (no network, no cost)
+python scripts\run_eval.py --split dev --per-category 3            # tune on the development split
+python scripts\run_eval.py --split test                            # the frozen test split: report it, do not tune on it
+python scripts\freeze_split.py --check                             # split integrity (no network, no cost)
+python scripts\run_eval.py --variants baseline,grade,agentic --per-category 1 --no-judge   # ablation smoke run
 python scripts\eval_rerank_ab.py                                  # reranker off vs on, retrieval only (no LLM or search calls, no tokens)
 python scripts\calibrate_retrieval.py                             # top-k and score-threshold calibration, retrieval only (no tokens)
 ```
@@ -380,7 +391,7 @@ docker compose run --rm tests                      # unit tests inside the conta
 ```
 
 - `tests/unit`: ids, cleaning, chunking, validators, loaders, sanitizer, URL checks, retrieval and evaluation metrics, routing, citations, config, Docker configuration.
-- `tests/workflow`: full graph runs with a scripted LLM and fake search, asserting the exact node path for scenarios A to E and the safety rules (for example, Tavily is not called in scenario A).
+- `tests/workflow`: full graph runs with a scripted LLM and fake search, asserting the exact node path for scenarios A to E and the safety rules (for example, Tavily is not called in scenario A), plus the ablation switches (a skipped grader or validator changes only what it should, and cannot open the web-search door).
 - `tests/api`: HTTP contract and authorization, the Streamlit app headless, and the evaluation endpoints.
 - `tests/integration`: live services, marked `integration`.
 

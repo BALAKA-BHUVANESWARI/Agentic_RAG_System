@@ -70,6 +70,7 @@ Also fixed: abstentions now say *why* web search was not used and ask the user t
 ## What is still not proven
 
 - **Agentic beats plain RAG: unproven.** The recorded comparison (24 questions per system, run `20261119T120610Z-f01dbc`) shows similar quality at roughly five times the tokens. Below 30 questions per system the dashboard declines to name a winner, and that run predates later prompt, validator and grader changes. A re-run and an ablation (what each node buys) are planned.
+- **No result is on unseen questions yet.** The rules were tuned while looking at failures on these same 93 questions. A frozen dev/test split now separates tuning from reporting ([EVAL_SPLIT.md](EVAL_SPLIT.md)), but the test split was visible during development, so it is less contaminated rather than clean. A block of fresh questions written after the freeze is still missing.
 - **The corpus is tiny and synthetic.** With 11 short documents the embedder alone finds the right document almost every time, so retrieval metrics saturate.
 - **Judge and run noise.** The faithfulness judge is the same model family as the generator and has not been checked against human labels. The same Teams-outage question produced an answer in one run and an abstention an hour later because the web results differed; a single live run is an observation, not a result.
 - **A typed password still reaches the LLM provider.** Web search is blocked and the audit record is redacted, but the text is not removed before the LLM call.

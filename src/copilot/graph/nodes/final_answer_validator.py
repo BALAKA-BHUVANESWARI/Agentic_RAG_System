@@ -28,6 +28,14 @@ def make_final_answer_validator(deps: GraphDeps):
                 "_event": event("abstention: nothing to validate", "pass"),
             }
 
+        if not s.agent_use_validator:
+            # ABLATION: no LLM grounding check; the answer goes out as generated (citations were still resolved in code).
+            return {
+                "answer": ans.model_dump(), "needs_revision": False,
+                "validation": {"passed": True, "skipped": "ablation switch AGENT_USE_VALIDATOR=false: no grounding check was run"},
+                "_event": event("validation skipped (ablation)", "pass without a grounding check", ablation="agent_use_validator=false"),
+            }
+
         items = [EvidenceItem(**e) for e in state.get("evidence", [])]
         grade = state.get("private_grade") or {}
         conflict_in_evidence = bool(grade.get("effective_sufficient") and grade.get("contradiction_detected"))

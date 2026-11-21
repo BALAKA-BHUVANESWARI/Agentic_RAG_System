@@ -26,6 +26,17 @@ def make_private_evidence_grader(deps: GraphDeps):
             return _result(grade, [], [], s.private_evidence_threshold, None, "no chunks retrieved")
 
         items = from_retrieved_chunks(chunks)
+        if not s.agent_use_grader:
+            # ABLATION: no LLM call; every retrieved chunk is treated as supporting evidence (baseline-style).
+            skipped = PrivateGrade(
+                sufficient=True, confidence=1.0, supporting_refs=list(range(1, len(items) + 1)), recommended_action="answer",
+                reasoning="Evidence grader skipped (ablation switch AGENT_USE_GRADER=false): all retrieved chunks are used.",
+            )
+            out = _result(skipped, items, list(range(1, len(items) + 1)), s.private_evidence_threshold, None, None)
+            out["_event"]["summary"] = "grader skipped (ablation): all retrieved chunks used"
+            out["_event"]["data"]["ablation"] = "agent_use_grader=false"
+            out["private_grade"]["skipped"] = True
+            return out
         try:
             grade, usage = deps.llm.structured(
                 [

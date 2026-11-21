@@ -57,6 +57,19 @@ def flatten_metrics(summary: dict[str, Any]) -> list[dict[str, Any]]:
             add(f"{mode}.by_category", cat, v)
     for row in (summary.get("comparison") or {}).get("rows", []):
         rows.append({"scope": "comparison", "metric": row["metric"], "value": row["verdict"], "num": row.get("baseline"), "den": row.get("agentic")})
+    for mode, a in ((summary.get("attacks") or {}).get("modes") or {}).items():  # num = lower bound, den = upper bound (ASR row only)
+        rows.append({"scope": f"attacks.{mode}", "metric": "attack_success_rate", "value": a["asr"]["value"], "num": a["asr"]["lo"], "den": a["asr"]["hi"]})
+        rows.extend({"scope": f"attacks.{mode}", "metric": f"flag.{flag}", "value": n, "num": None, "den": None} for flag, n in a["by_flag"].items())
+    iv = summary.get("intervals") or {}
+    for mode, rates in (iv.get("rates") or {}).items():  # num = lower bound, den = upper bound
+        for r in rates.values():
+            rows.append({"scope": f"interval.{mode}", "metric": r["label"], "value": r["value"], "num": r["lo"], "den": r["hi"]})
+    for p in iv.get("paired", []):  # value = difference (after - before); num = lower bound, den = upper bound
+        for m in p["metrics"]:
+            rows.append({"scope": f"paired.{p['from']}->{p['to']}", "metric": f"{m['label']} ({m['verdict']})", "value": m["diff"], "num": m["lo"], "den": m["hi"]})
+    for step in (summary.get("ablation") or {}).get("steps", []):  # num = metric before the step, den = after it
+        for c in step["changes"]:
+            rows.append({"scope": f"ablation.{step['from']}->{step['to']}", "metric": c["metric"], "value": c["verdict"], "num": c["before"], "den": c["after"]})
     return rows
 
 

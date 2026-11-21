@@ -1,6 +1,6 @@
-"""Evaluation runner: runs the baseline RAG and/or the agentic workflow over the labelled dataset.
+"""Evaluation runner: runs the baseline RAG and/or the agentic workflow (or named ablation variants of it) over the labelled dataset.
 
-Both systems see the SAME questions, roles and corpus. Cases run sequentially (shared provider rate
+Every system sees the SAME questions, roles and corpus. Cases run sequentially (shared provider rate
 limits) and every result is appended to ``cases.jsonl`` the moment it exists, so an interrupted run can be
 resumed: finished cases are skipped, failed ones are retried. Per run directory
 (``<EVAL_DIR>/results/<run_id>/``): ``config.json``, ``retrieval.jsonl``, ``cases.jsonl``, ``summary.json``,
@@ -17,12 +17,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterator, Literal, TypeVar
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from copilot.config import Settings
 from copilot.db.schema import init_db
 from copilot.evaluation import adapters
-from copilot.evaluation.aggregate import compare_modes, summarize_mode, summarize_retrieval
+from copilot.evaluation import split as split_registry
+from copilot.evaluation import variants as variant_registry
+from copilot.evaluation.aggregate import ablation_table, compare_modes, summarize_mode, summarize_retrieval
+from copilot.evaluation.attacks import is_attack, summarize_attacks
+from copilot.evaluation.paired import build_intervals
 from copilot.evaluation.reporting import write_cases_csv, write_metrics_csv
 from copilot.evaluation.results import CaseResult, RetrievalCaseResult, RetrievedItem
 from copilot.evaluation.retrieval_metrics import score_retrieval
@@ -49,9 +53,12 @@ class RunOptions(BaseModel):
     """What to run. ``resume=True`` re-uses the options saved with ``run_id`` (other selection fields are ignored)."""
 
     mode: Literal["agentic", "baseline", "both"] = "both"
+    split: Literal["all", "dev", "test"] = Field(default="all", description="Frozen dev/test split (docs/EVAL_SPLIT.md); 'all' runs every case.")
+    variants: list[str] | None = Field(default=None, description="Ablation ladder rungs to run instead of ``mode`` (see evaluation/variants.py).")
     limit: int | None = Field(default=None, ge=1, description="First N cases after the other filters.")
     per_category: int | None = Field(default=None, ge=1, description="First N cases of EACH category (good for cheap smoke runs).")
     categories: list[str] | None = None
+    attacks_only: bool = Field(default=False, description="Only the adversarial block (notes start with 'ADVERSARIAL:'), e.g. for an attack-success run.")
     use_judge: bool = True
     run_id: str | None = None
     resume: bool = False
@@ -65,15 +72,39 @@ class RunOptions(BaseModel):
             raise ValueError(f"unknown categories {bad}; valid: {CATEGORIES}")
         return v or None
 
+    @field_validator("variants")
+    @classmethod
+    def _known_variants(cls, v: list[str] | None) -> list[str] | None:
+        return variant_registry.normalise(v) if v else None
+
+    @model_validator(mode="after")
+    def _mode_or_variants(self) -> "RunOptions":
+        if self.variants and self.mode != "both":
+            raise ValueError("use either `mode` or `variants`, not both")
+        return self
+
     @property
     def modes(self) -> list[str]:
-        """Systems to run, baseline first."""
+        """Systems to run, baseline first (ablation rungs in ladder order when ``variants`` is set)."""
+        if self.variants:
+            return list(self.variants)
         return ["baseline", "agentic"] if self.mode == "both" else [self.mode]
+
+    @property
+    def store_mode(self) -> str:
+        """Value for the ``eval_runs.mode`` column, whose CHECK constraint allows only agentic / baseline / both.
+
+        The exact rungs of an ablation run are saved in the run's metadata and ``config.json``.
+        """
+        modes = self.modes
+        if "baseline" in modes:
+            return "both" if len(modes) > 1 else "baseline"
+        return "agentic"
 
 
 def select_cases(cases: list[EvalCase], opts: RunOptions) -> list[EvalCase]:
     """Apply category / per-category / limit filters (in that order). Raises if nothing is left."""
-    sel = [c for c in cases if not opts.categories or c.category in opts.categories]
+    sel = [c for c in cases if (not opts.categories or c.category in opts.categories) and (not opts.attacks_only or is_attack(c))]
     if opts.per_category:
         seen: dict[str, int] = {}
         picked = []
@@ -145,9 +176,13 @@ class EvaluationRunner:
     def __init__(
         self, settings: Settings, *, agent: Any, baseline: Any, retriever: Any, judge: Any | None = None,
         store: EvalRunStore | None = None, validate: bool = True, sleep: Callable[[float], None] = time.sleep,
+        agent_factory: Callable[[dict[str, Any]], Any] | None = None,
     ) -> None:
         self._s = settings
         self._agent, self._baseline, self._retriever, self._judge = agent, baseline, retriever, judge
+        # ``agent_factory(overrides)`` builds an agent with those Settings fields changed (ablation variants only).
+        self._agent_factory = agent_factory
+        self._variant_agents: dict[str, Any] = {}
         self._store = store or EvalRunStore(settings.sqlite_path)
         self._validate = validate
         self._sleep = sleep
@@ -210,7 +245,23 @@ class EvaluationRunner:
                 raise ValueError("Evaluation dataset has problems: " + "; ".join(problems[:5]))
         if opts.resume and self.read_config(opts.run_id or "").get("dataset_sha256") != file_sha256(path):
             raise ValueError("The dataset changed since this run started; start a new run instead of resuming.")
+        if self._agent_factory is None and any(m not in ("baseline", "agentic") for m in opts.modes):
+            raise ValueError("Ablation variants need a runner built with an agent factory (use scripts/run_eval.py --variants).")
+        if opts.split != "all":
+            cases = self._cases_in_split(cases, opts)
         return opts, select_cases(cases, opts)
+
+    def _cases_in_split(self, cases: list[EvalCase], opts: RunOptions) -> list[EvalCase]:
+        """The cases of the chosen split; refuses a split file that is inconsistent with the dataset or changed since a resumed run began."""
+        path = self._s.eval_split_path
+        sp = split_registry.load_split(path)  # ValueError: missing or malformed
+        problems = sp.problems({c.id: c.category for c in cases})
+        if problems:
+            raise ValueError("Evaluation split has problems: " + "; ".join(problems[:3]))
+        if opts.resume and self.read_config(opts.run_id or "").get("split_sha256") != file_sha256(path):
+            raise ValueError("The split file changed since this run started; start a new run instead of resuming.")
+        ids = sp.ids(opts.split)
+        return [c for c in cases if c.id in ids]
 
     # ------------------------------------------------------------------ the run
     def run(self, opts: RunOptions, *, progress: ProgressFn | None = None, should_cancel: Callable[[], bool] | None = None) -> dict[str, Any]:
@@ -233,11 +284,14 @@ class EvaluationRunner:
                 "dataset_path": str(s.eval_dataset_path), "dataset_sha256": file_sha256(s.eval_dataset_path),
                 "case_ids": [c.id for c in cases], "total_units": len(cases) * len(modes), "settings": settings_snapshot(s),
             }
+            if opts.variants:
+                cfg["variants"] = {m: variant_registry.overrides_for(m) for m in modes}
+            cfg["split_sha256"] = file_sha256(s.eval_split_path) if opts.split != "all" else None
             _write_json(run_dir / "config.json", cfg)
         self._store.start_run(
-            run_id, opts.mode, str(s.eval_dataset_path), len(cases),
+            run_id, opts.store_mode, str(s.eval_dataset_path), len(cases),
             {"use_judge": opts.use_judge and self._judge is not None, "dataset_sha256": cfg["dataset_sha256"], "resumed": opts.resume,
-             "categories": opts.categories, "limit": opts.limit, "per_category": opts.per_category},
+             "categories": opts.categories, "attacks_only": opts.attacks_only, "limit": opts.limit, "per_category": opts.per_category, "variants": opts.variants},
         )
 
         status, error = "completed", None
@@ -319,6 +373,16 @@ class EvaluationRunner:
             except Exception:  # noqa: BLE001 - a broken progress callback must not stop the evaluation
                 log.warning("Progress callback failed")
 
+    def _agent_for(self, mode: str) -> Any:
+        """``agentic`` is the injected full agent; an ablation variant is built once, with its settings overrides."""
+        if mode == "agentic":
+            return self._agent
+        if mode not in self._variant_agents:
+            if self._agent_factory is None:
+                raise ValueError(f"variant {mode!r} needs an agent factory")
+            self._variant_agents[mode] = self._agent_factory(variant_registry.overrides_for(mode))
+        return self._variant_agents[mode]
+
     def _run_one(self, case: EvalCase, mode: str, run_id: str, use_judge: bool) -> CaseResult:
         """Ask one system one question, optionally judge, then score."""
         started = time.perf_counter()
@@ -327,10 +391,10 @@ class EvaluationRunner:
             if mode == "baseline":
                 result, ans, evidence = adapters.from_baseline(case, self._baseline.answer(case.question, case.role))
             else:
-                resp = self._agent.answer(
+                resp = self._agent_for(mode).answer(
                     case.question, case.role, user_id="eval", session_id=run_id, external_search_allowed=case.external_search_allowed,
                 )
-                result, ans, evidence = adapters.from_agentic(case, resp)
+                result, ans, evidence = adapters.from_agentic(case, resp, mode)
         except Exception as exc:  # noqa: BLE001 - recorded as an error result
             log.warning("Case %s [%s] raised %s", case.id, mode, type(exc).__name__)
             result = adapters.error_result(case, mode, exc, (time.perf_counter() - started) * 1000)
@@ -359,12 +423,17 @@ class EvaluationRunner:
             f"Retrieval metrics rank a pool of {s.eval_retrieval_pool} chunks for the original question (minimum score ignored); chunk recall is relative to that pool.",
             "All results are from a single run on a small labelled set; differences of a few points can be noise.",
         ]
-        if len(modes) == 2 and per_mode["baseline"] and per_mode["agentic"]:
-            paired = {r.case_id for r in per_mode["baseline"]} & {r.case_id for r in per_mode["agentic"]}
-            if len(paired) < max(len(per_mode["baseline"]), len(per_mode["agentic"])):
-                notes.append(f"The run is incomplete: baseline and agentic are compared only on the {len(paired)} question(s) both have answered.")
+        if len(modes) >= 2 and all(per_mode[m] for m in modes):
+            paired = set.intersection(*({r.case_id for r in per_mode[m]} for m in modes))
+            if len(paired) < max(len(per_mode[m]) for m in modes):
+                who = " and ".join(modes) if len(modes) == 2 else ", ".join(modes)
+                notes.append(f"The run is incomplete: {who} are compared only on the {len(paired)} question(s) {'both' if len(modes) == 2 else 'all of them'} have answered.")
             per_mode = {m: [r for r in rs if r.case_id in paired] for m, rs in per_mode.items()}
         modes_summary = {m: summarize_mode(cases, rs, s) for m, rs in per_mode.items() if rs}
+        if opts.split == "test":
+            notes.append("This run used the frozen TEST split: report it, but do not change prompts, thresholds or routing because of an individual failure (see docs/EVAL_SPLIT.md).")
+        elif opts.split == "dev":
+            notes.append("This run used the DEV split: fine for tuning, but quote the test split for a headline number.")
         errors = sum(1 for r in results.values() if r.error)
         if errors:
             notes.append(f"{errors} request(s) failed (service errors) and count as incorrect. Resume the run to retry them.")
@@ -376,13 +445,17 @@ class EvaluationRunner:
             notes.append("Faithfulness/relevance come from an LLM judge (same model family as the generator); treat them as a noisy signal.")
         summary: dict[str, Any] = {
             "run_id": run_id, "status": status, "error": error, "options": cfg["options"],
-            "dataset": {"path": cfg["dataset_path"], "sha256": cfg["dataset_sha256"], "num_cases": len(cases),
+            "dataset": {"path": cfg["dataset_path"], "sha256": cfg["dataset_sha256"], "num_cases": len(cases), "split": opts.split,
                         "category_counts": {c: sum(1 for x in cases if x.category == c) for c in CATEGORIES if any(x.category == c for x in cases)}},
             "started_at": cfg["started_at"], "finished_at": utc_now_iso(), "settings": cfg["settings"],
             "progress": {"units_total": len(wanted), "units_recorded": len(results), "units_ok": sum(1 for r in results.values() if r.error is None)},
             "retrieval": summarize_retrieval(list(retrieval.values()), s.eval_ks) if retrieval else None,
             "modes": modes_summary,
-            "comparison": compare_modes(modes_summary["baseline"], modes_summary["agentic"]) if len(modes_summary) == 2 else None,
+            "comparison": compare_modes(modes_summary["baseline"], modes_summary["agentic"]) if {"baseline", "agentic"} <= set(modes_summary) else None,
+            "variants": cfg.get("variants"),
+            "intervals": build_intervals(cases, per_mode, modes, s, is_ablation=bool(opts.variants)),
+            "attacks": summarize_attacks(cases, per_mode, s.eval_confidence),
+            "ablation": ablation_table(modes_summary, modes, {m: variant_registry.get_variant(m).label for m in modes}) if opts.variants and len(modes_summary) > 1 else None,
             "ingestion": ingestion_stats(s.sqlite_path),
             "judge": {"enabled": bool(opts.use_judge and self._judge is not None), "judged_answers": len(judged),
                       "tokens": sum(r.scores.get("judge_tokens", 0) for r in judged), "calls": sum(r.scores.get("judge_calls", 0) for r in judged)},

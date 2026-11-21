@@ -40,6 +40,7 @@ COPY scripts ./scripts
 COPY tests ./tests
 COPY data/kb_documents ./data/kb_documents
 COPY data/eval/dataset.json ./data/eval/dataset.json
+COPY data/eval/split.json ./data/eval/split.json
 
 # Run as a non-root user. These folders are mounted as named volumes by docker-compose.
 RUN useradd --create-home --uid 10001 app \

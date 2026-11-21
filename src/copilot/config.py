@@ -108,6 +108,9 @@ class Settings(BaseSettings):
     max_rewrite_retries: int = Field(default=2, ge=0, le=5)
     max_validation_revisions: int = Field(default=1, ge=0, le=3)
     graph_recursion_limit: int = Field(default=40, ge=10, le=200)
+    # ABLATION switches for evaluation only: they measure what each agent step buys. Every default keeps the full workflow.
+    agent_use_grader: bool = Field(default=True, description="False skips the LLM evidence grader: any retrieved chunk counts as sufficient (nothing retrieved still abstains).")
+    agent_use_validator: bool = Field(default=True, description="False skips the final LLM grounding check; citation marker checks in the answer generator still run.")
 
     # ---- Embeddings batching / external-call resilience ----------------
     embedding_batch_size: int = Field(default=32, ge=1)
@@ -133,11 +136,15 @@ class Settings(BaseSettings):
 
     # ---- Evaluation -----------------------------------------------------
     eval_dataset_path: Path = Path("data/eval/dataset.json")
+    eval_split_path: Path = Path("data/eval/split.json")  # frozen dev/test assignment, see docs/EVAL_SPLIT.md
     eval_ks: list[int] = Field(default_factory=lambda: [1, 3, 5])
     eval_retrieval_pool: int = Field(default=20, ge=5, le=50, description="Chunks retrieved to estimate how many relevant chunks exist.")
     eval_answer_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="Share of expected answer points an answer must contain to count as correct.")
     eval_faithfulness_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
     eval_case_delay_s: float = Field(default=0.0, ge=0.0, description="Pause between cases (helps with provider rate limits).")
+    eval_bootstrap_resamples: int = Field(default=2000, ge=200, le=20000, description="Bootstrap resamples for the paired-difference intervals.")
+    eval_bootstrap_seed: int = Field(default=7, description="Seed for the bootstrap, so a run always reports the same intervals.")
+    eval_confidence: float = Field(default=0.95, ge=0.8, le=0.99, description="Confidence level of the reported intervals.")
     eval_max_consecutive_errors: int = Field(
         default=3, ge=1,
         description="Stop an evaluation run after this many infrastructure errors in a row (a quota or outage would only waste time); resume later.",
@@ -163,7 +170,7 @@ class Settings(BaseSettings):
     )
 
     # ---- Validators -----------------------------------------------------
-    @field_validator("sqlite_path", "kb_documents_dir", "eval_dir", "uploads_dir", "eval_dataset_path")
+    @field_validator("sqlite_path", "kb_documents_dir", "eval_dir", "uploads_dir", "eval_dataset_path", "eval_split_path")
     @classmethod
     def _resolve_relative_to_project(cls, value: Path) -> Path:
         """Anchor relative paths at the project root so cwd never matters."""

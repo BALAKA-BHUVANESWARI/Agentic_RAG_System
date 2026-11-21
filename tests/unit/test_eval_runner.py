@@ -10,7 +10,7 @@ from copilot.db.schema import init_db
 from copilot.evaluation import adapters
 from copilot.evaluation.judge import AnswerJudge
 from copilot.evaluation.reporting import flatten_metrics
-from copilot.evaluation.runner import EvaluationRunner, RunOptions, headline, select_cases
+from copilot.evaluation.runner import RunOptions, headline, select_cases
 from copilot.evaluation.schemas import load_dataset
 from copilot.evaluation.scoring import score_case
 from copilot.evaluation.store import EvalRunStore
@@ -18,7 +18,7 @@ from copilot.generation.citations import EXTERNAL_WARNING
 from copilot.generation.models import EvidenceItem
 from copilot.llm.client import LLMUnavailableError
 from eval_helpers import (
-    EXTERNAL_Q, UNANSWERABLE_Q, VPN_DOC, VPN_Q, StubAgent, StubBaseline, agentic_response, default_agentic, make_abstention, make_answer, write_dataset,
+    EXTERNAL_Q, UNANSWERABLE_Q, VPN_DOC, VPN_Q, StubAgent, agentic_response, default_agentic, make_abstention, make_answer, write_dataset,
 )
 from fakes import ScriptedLLM
 
@@ -28,19 +28,6 @@ JUDGE_OK = dict(faithfulness=1.0, relevance=0.9)
 @pytest.fixture
 def cases(tmp_path):
     return load_dataset(write_dataset(tmp_path / "cases.json"))
-
-
-@pytest.fixture
-def make_runner(settings, retriever, kb, tmp_path):
-    """Factory: runner over the real (fake-embedded) KB with stub agent/baseline. Returns (runner, agent, baseline, sleeps)."""
-
-    def _make(agent=None, baseline=None, judge=None, validate=False, **overrides):
-        s = settings.model_copy(update={"eval_dir": tmp_path / "eval", "eval_dataset_path": write_dataset(tmp_path / "ds.json"), **overrides})
-        agent, baseline, sleeps = agent or StubAgent(), baseline or StubBaseline(), []
-        runner = EvaluationRunner(s, agent=agent, baseline=baseline, retriever=retriever, judge=judge, validate=validate, sleep=sleeps.append)
-        return runner, agent, baseline, sleeps
-
-    return _make
 
 
 # ------------------------------------------------------------------------------ selection
