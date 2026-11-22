@@ -15,7 +15,7 @@ only; nothing here is real company policy.
 | needs_rewriting | 5 | vague or symptom-style wording (F17 and F18 deliberately sit next to a document about a different problem) |
 | insufficient_private | 4 | plausible IT questions the documents do not answer; must abstain and must not search the web |
 | current_external | 3 | stable public vendor facts (Windows 11 requirements, Teams ports, Windows 10 end of support) |
-| conflicting | 3 | the current and the superseded password policy; a conflict notice is expected |
+| conflicting | 3 | the current and the superseded password policy; the labels expect the older edition to be stated (F29-F31). Since the older policy is marked superseded these labels do not measure conflict handling: results are also reported without this category ([finding 10](FINDINGS.md)) |
 | unanswerable | 5 | undocumented or restricted detail (F32 names a keyword from the restricted runbook as a leak check) |
 | out_of_scope | 4 | |
 
@@ -66,3 +66,4 @@ environment variables set). Keep exactly the 11 core documents in the index and 
 ## Edit log
 
 * 2026-11-22: created. Fingerprint `931aeabfa903552fcd542935016e69d05d241581d359ef8dde8e17e3c01c171e`. Not yet run.
+* 2026-11-22 (later, before any run): documentation only, no label or question changed and the fingerprint is unchanged. The `conflicting` row above gained a caveat: F29-F31 carry the same expectation as C01-C06 (the older edition of the password policy stated as a live conflict), which no longer fits a corpus where that edition is marked superseded. They stay as written; the renderer reports overall correct with and without the category ([finding 10](FINDINGS.md)).
