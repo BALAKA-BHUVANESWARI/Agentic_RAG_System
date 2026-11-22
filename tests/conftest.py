@@ -155,10 +155,11 @@ def make_agent(make_settings, tmp_path, embedder, index):
     from fakes import FakeSearch, ScriptedLLM
 
     def _make(search=None, retriever=None, settings_overrides=None, **scripts):
-        s = make_settings(
+        defaults = dict(
             sqlite_path=tmp_path / "app.db", uploads_dir=tmp_path / "uploads", service_retry_base_delay_s=0.0,
-            retrieval_min_score=0.0, chunk_size=300, chunk_overlap=40, **(settings_overrides or {}),
+            retrieval_min_score=0.0, chunk_size=300, chunk_overlap=40,
         )
+        s = make_settings(**{**defaults, **(settings_overrides or {})})
         llm = ScriptedLLM(**scripts)
         search = search or FakeSearch()
         store = PineconeStore(s, index=index)

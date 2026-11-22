@@ -53,9 +53,10 @@ A locally runnable IT support assistant for employees. It answers from the compa
 ```mermaid
 flowchart TD
     START([Question]) --> C[query_classifier]
-    C -- out_of_scope --> A[answer_generator]
-    C -- otherwise --> R[private_retriever]
+    C --> R[private_retriever]
+    R -- out_of_scope verdict and nothing retrieved --> A[answer_generator]
     R --> G[private_evidence_grader]
+    G -- out_of_scope verdict --> A
     G -- sufficient --> A
     G -- insufficient, retries left --> W[query_rewriter]
     W --> R
@@ -261,7 +262,7 @@ Used only when the classifier says both are needed and the grader reports that t
 Both private retrieval and (where allowed) external search fail. The system does not guess: it says reliable information was not found, recommends the IT Service Desk, and records the abstention reason.
 
 **Scenario E: out of scope.**
-An unrelated question gets a polite decline with no retrieval and no web search.
+An unrelated question gets a polite decline and no web search. The classifier's out-of-scope verdict is checked, not trusted: private retrieval still runs once (a local embedding and an index query, no LLM call). If nothing scores above the retrieval threshold the decline stands; if documents are retrieved the grader decides, with no rewrite retries and no web search, and a grader-accepted answer overrides the verdict (the case that motivated this is X18 in finding 9, a company-policy question the model called out of scope). Measured on the dev split before the change (`scripts/calibrate_out_of_scope.py`, 6 out-of-scope questions): their best retrieval scores were at most 0.237 and every other dev question scored at least 0.286, so the existing 0.25 threshold separated them on that sample; the margin is thin and the sample small. The change has not been re-evaluated end to end.
 
 Other checks:
 
@@ -415,7 +416,7 @@ python -m pytest tests\retrieval --run-retrieval                # then check
 - **External results vary.** Tavily returns different pages over time, and official vendor pages are not always returned, so current-information questions can abstain on some runs. This is a safe failure, but it lowers the answer rate.
 - **LLM judgements vary.** The graders and the validator are LLM calls, so identical questions can be accepted on one run and rejected on another. Deterministic checks are used wherever possible, and the evaluation reports include the sample size.
 - **Free-tier limits.** Groq's free tier has per-minute and per-day token limits that make large evaluation runs slow and can interrupt them (runs are resumable).
-- **Known routing observations** from evaluation runs, not tuned on single cases: the unnecessary-search problem (I02, I03) was fixed and re-measured at 0/21; a borderline question can still be classified as out of scope and skip retrieval (one case in the latest run); a correct answer to a conflicting-documents question can fail closed or abstain (C03 in the latest run), and the baseline handled conflicts better; a superseded policy still competes with the current one for top-k slots (it is labelled as superseded, not hidden).
+- **Known routing observations** from evaluation runs, not tuned on single cases: the unnecessary-search problem (I02, I03) was fixed and re-measured at 0/21; a borderline question can be classified as out of scope (X18 in the 2026-11-22 attacks run skipped retrieval because of it; since then an out-of-scope verdict is rechecked with one retrieval, not yet re-measured); a correct answer to a conflicting-documents question can fail closed or abstain (C03 in the latest run), and the baseline handled conflicts better; a superseded policy still competes with the current one for top-k slots (it is labelled as superseded, not hidden).
 - **Superseded status is set by a person.** Someone has to write the `Status:` header line or use the upload form; nothing detects that a policy was replaced. The check that an answer does not present old text as current is an LLM judgement (the labelling notice is deterministic), so it can miss; the evaluation cases V01 to V03 cover it only through keyword and citation checks.
 - **Typed secrets still reach the LLM provider.** If someone types a password into the chat, the classifier blocks web search and the audit record is redacted, but the text is sent to Groq with the rest of the question (it is not removed before the LLM call), and an answered request gets no "change that password" line (only abstentions do). The audit record does not keep it.
 - **Community pages are rejected wholesale.** A question that only a forum thread could answer will abstain instead of citing it. This is the safe side; official vendor pages and status pages are preferred.

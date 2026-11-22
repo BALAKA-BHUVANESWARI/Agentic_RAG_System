@@ -1,7 +1,10 @@
 """Conditional-edge routing functions (pure; unit-testable without a graph).
 
 Invariants enforced here:
-* Private retrieval always runs first for in-scope questions.
+* Private retrieval always runs first for in-scope questions. An ``out_of_scope`` verdict is not trusted on its own
+  (the model once called a company-password-policy question out of scope, finding 9, X18): retrieval still runs once as a
+  check. Nothing above ``RETRIEVAL_MIN_SCORE`` means the decline stands; otherwise the grader decides, with no rewrite
+  retries and no web search, because only ``external_current`` / ``both`` can open external search.
 * External search needs: insufficient private evidence (or a genuine supplement need),
   AND search allowed (config + request), AND no sensitive content, AND the CLASSIFIER says the
   question needs current public information (intent ``external_current`` or ``both``).
@@ -60,24 +63,28 @@ def wants_external_supplement(state: CopilotState, settings: Settings) -> bool:
     return bool(intent == "both" and grade.get("needs_external_supplement") and external_permitted(state, settings))
 
 
+def _out_of_scope(state: CopilotState) -> bool:
+    return (state.get("classification") or {}).get("intent") == "out_of_scope"
+
+
 def route_after_classifier(state: CopilotState) -> Literal["private_retriever", "answer_generator"]:
-    """Out-of-scope questions skip retrieval and search entirely."""
-    if _blocked(state) or (state.get("classification") or {}).get("intent") == "out_of_scope":
-        return ANSWER
-    return RETRIEVER
+    """Every question, even one called out of scope, gets a private retrieval check first (never web search)."""
+    return ANSWER if _blocked(state) else RETRIEVER
 
 
 def route_after_retriever(state: CopilotState) -> Literal["private_evidence_grader", "answer_generator"]:
-    """A retrieval outage abstains instead of grading nothing."""
-    return ANSWER if _blocked(state) else GRADER
+    """A retrieval outage abstains instead of grading nothing; an out-of-scope verdict with nothing retrieved is declined."""
+    if _blocked(state) or (_out_of_scope(state) and not state.get("retrieved_chunks")):
+        return ANSWER
+    return GRADER
 
 
 def route_after_private_grader(
     state: CopilotState, settings: Settings
 ) -> Literal["answer_generator", "query_rewriter", "external_search"]:
     """Decide between answering, rewriting (bounded), external search, or abstaining."""
-    if _blocked(state):
-        return ANSWER
+    if _blocked(state) or _out_of_scope(state):
+        return ANSWER  # out of scope: the grader only decides whether the documents do cover it; no rewrite, no search
     grade = state.get("private_grade") or {}
     if grade.get("effective_sufficient"):
         return EXTERNAL if wants_external_supplement(state, settings) else ANSWER

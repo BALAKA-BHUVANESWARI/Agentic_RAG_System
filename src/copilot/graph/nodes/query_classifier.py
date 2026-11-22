@@ -39,7 +39,7 @@ def make_query_classifier(deps: GraphDeps):
             cls = cls.model_copy(update={
                 "contains_sensitive": True, "sensitive_reason": "possible secret or credential detected by pattern check",
             })
-        decision = "out_of_scope: skip retrieval and search" if cls.intent == "out_of_scope" else "continue: private retrieval first"
+        decision = "out_of_scope: private retrieval still runs once as a check; no web search" if cls.intent == "out_of_scope" else "continue: private retrieval first"
         return {
             "classification": cls.model_dump(),
             "current_query": question,

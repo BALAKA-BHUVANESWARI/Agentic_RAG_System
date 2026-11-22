@@ -134,8 +134,24 @@ def _grade(effective=False, action="rewrite_query", supplement=False):
 def test_classifier_routing():
     assert routing.route_after_classifier(_st("internal_it")) == "private_retriever"
     assert routing.route_after_classifier(_st("external_current")) == "private_retriever"  # private-first, always
-    assert routing.route_after_classifier(_st("out_of_scope")) == "answer_generator"
+    assert routing.route_after_classifier(_st("out_of_scope")) == "private_retriever"  # the verdict is checked, not trusted
     assert routing.route_after_classifier({**_st(), "fatal_error": "x"}) == "answer_generator"
+
+
+def test_out_of_scope_verdict_is_declined_only_when_nothing_relevant_is_retrieved():
+    chunk = {"chunk_id": "c1"}
+    assert routing.route_after_retriever(_st("out_of_scope", retrieved_chunks=[])) == "answer_generator"
+    assert routing.route_after_retriever(_st("out_of_scope")) == "answer_generator"
+    assert routing.route_after_retriever(_st("out_of_scope", retrieved_chunks=[chunk])) == "private_evidence_grader"
+    assert routing.route_after_retriever(_st("internal_it", retrieved_chunks=[])) == "private_evidence_grader"  # unchanged
+    assert routing.route_after_retriever(_st("out_of_scope", retrieved_chunks=[chunk], fatal_error="x")) == "answer_generator"
+
+
+def test_out_of_scope_never_rewrites_or_searches(make_settings):
+    s = make_settings()
+    for grade in (_grade(False, "external_search"), _grade(False, "rewrite_query"), _grade(True, "answer", supplement=True)):
+        st = _st("out_of_scope", private_grade=grade)
+        assert routing.route_after_private_grader(st, s) == "answer_generator"
 
 
 def test_sufficient_private_evidence_never_triggers_search_even_for_external_intent(make_settings):

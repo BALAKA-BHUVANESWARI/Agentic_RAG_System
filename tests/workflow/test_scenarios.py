@@ -167,12 +167,36 @@ def test_search_service_failure_degrades_to_abstention(make_agent, kb):
 
 
 # ================================ Scenario E =====================================================
-def test_scenario_e_out_of_scope_skips_retrieval_and_search(make_agent, kb):
-    h = make_agent(QueryClassification=[CLS_OOS])
+def test_scenario_e_out_of_scope_is_declined_after_an_empty_retrieval_check_without_search(make_agent, kb):
+    # Real threshold (the harness default of 0.0 would return chunks for any query): nothing is close to a lasagna recipe.
+    h = make_agent(settings_overrides={"retrieval_min_score": 0.25}, QueryClassification=[CLS_OOS])
     r = h.agent.answer("What's a good recipe for lasagna?")
-    assert r.path == ["query_classifier", "answer_generator", "final_answer_validator", "audit_logger"]
-    assert r.answer.abstention_reason == "out_of_scope" and r.retrieval_attempts == [] and h.search.call_count == 0
+    assert r.path == ["query_classifier", "private_retriever", "answer_generator", "final_answer_validator", "audit_logger"]
+    assert r.answer.abstention_reason == "out_of_scope" and h.search.call_count == 0
+    assert len(r.retrieval_attempts) == 1 and not r.retrieval_attempts[0]["chunk_ids"]
     assert h.llm.names() == ["QueryClassification"]
+
+
+def test_out_of_scope_verdict_is_overridden_when_the_documents_cover_the_question(make_agent, kb):
+    """Finding 9, X18: a wrong out-of-scope verdict must not hide the internal documents. Web search stays closed."""
+    h = make_agent(QueryClassification=[CLS_OOS], PrivateGrade=[GRADE_OK],
+                   AnswerDraft=[answer_draft("Open the SecureLink client and connect [1].")], GroundingCheck=[OK_CHECK])
+    r = h.agent.answer("How do I connect to the company VPN from home?", "employee")
+    assert r.path == PATH_A
+    assert not r.answer.abstained and r.answer.citations[0].kind == "private"
+    assert h.search.call_count == 0 and not r.external_search_triggered
+    assert h.audit.get(r.request_id).intent == "out_of_scope"  # the audit record still shows what the classifier said
+
+
+def test_out_of_scope_verdict_stands_when_retrieved_documents_do_not_cover_it(make_agent, kb):
+    """Chunks came back (harness threshold 0.0) but the grader rejects them: decline as out of scope, no rewrite, no search."""
+    search = FakeSearch([TEAMS_RESULT])
+    h = make_agent(search=search, QueryClassification=[CLS_OOS], PrivateGrade=[GRADE_BAD])
+    r = h.agent.answer("Write me a short poem about autumn.", "employee")
+    assert r.path == ["query_classifier", "private_retriever", "private_evidence_grader", "answer_generator",
+                      "final_answer_validator", "audit_logger"]
+    assert r.answer.abstained and r.answer.abstention_reason == "out_of_scope"
+    assert search.call_count == 0 and r.retry_count == 0 and h.llm.count("QueryRewrite") == 0
 
 
 # ================================ Safety rules ====================================================

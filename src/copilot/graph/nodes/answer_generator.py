@@ -62,7 +62,9 @@ def make_answer_generator(deps: GraphDeps):
         forced = state.get("force_abstain")
         if state.get("fatal_error") and not forced:
             forced = {"reason": "internal_error", "error": state["fatal_error"]}
-        if (state.get("classification") or {}).get("intent") == "out_of_scope" and not forced:
+        out_of_scope = (state.get("classification") or {}).get("intent") == "out_of_scope"
+        # An out-of-scope verdict stands unless private retrieval found evidence the grader accepted (finding 9, X18).
+        if out_of_scope and not forced and not (state.get("private_grade") or {}).get("effective_sufficient"):
             forced = {"reason": "out_of_scope"}
         if forced:
             ans = make_abstention(forced["reason"], missing=forced.get("missing"), error=forced.get("error"), model=model)
@@ -105,7 +107,7 @@ def make_answer_generator(deps: GraphDeps):
                 f"abstain: {ans.abstention_reason}" if ans.abstained else "continue: validate grounding",
                 private_sources=sum(i.kind == "private" for i in items), external_sources=sum(i.kind == "external" for i in items),
                 citations=[c.ref for c in ans.citations], invalid_markers_removed=ans.invalid_markers_removed,
-                uncited_lines=len(ans.uncited_lines), revision=revising,
+                uncited_lines=len(ans.uncited_lines), revision=revising, out_of_scope_verdict_overridden=out_of_scope,
             ),
         }
 
