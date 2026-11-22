@@ -10,6 +10,7 @@ from copilot.db.schema import init_db
 from copilot.evaluation import adapters
 from copilot.evaluation.judge import AnswerJudge
 from copilot.evaluation.reporting import flatten_metrics
+from copilot.evaluation import runner as runner_module
 from copilot.evaluation.runner import RunOptions, headline, select_cases
 from copilot.evaluation.schemas import load_dataset
 from copilot.evaluation.scoring import score_case
@@ -248,3 +249,34 @@ def test_a_success_resets_the_error_streak(make_runner):
 
     runner, *_ = make_runner(agent=StubAgent(responder), eval_max_consecutive_errors=2)
     assert runner.run(RunOptions(run_id="blips", mode="agentic"))["status"] == "completed"
+
+
+def test_write_json_retries_when_windows_holds_the_file(tmp_path, monkeypatch):
+    """A reader holding summary.json open makes os.replace raise PermissionError for a moment; the write must wait it out."""
+    from pathlib import Path
+    real_replace, calls = Path.replace, {"n": 0}
+
+    def flaky(self, target):
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            raise PermissionError("[WinError 5] Access is denied")
+        return real_replace(self, target)
+
+    monkeypatch.setattr(Path, "replace", flaky)
+    monkeypatch.setattr(runner_module.time, "sleep", lambda _s: None)
+    target = tmp_path / "summary.json"
+    runner_module._write_json(target, {"ok": 1})
+    assert json.loads(target.read_text(encoding="utf-8")) == {"ok": 1} and calls["n"] == 3
+    assert not (tmp_path / "summary.json.tmp").exists()
+
+
+def test_write_json_gives_up_after_bounded_attempts(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    def always_denied(self, target):
+        raise PermissionError("[WinError 5] Access is denied")
+
+    monkeypatch.setattr(Path, "replace", always_denied)
+    monkeypatch.setattr(runner_module.time, "sleep", lambda _s: None)
+    with pytest.raises(PermissionError):
+        runner_module._write_json(tmp_path / "summary.json", {"ok": 1})

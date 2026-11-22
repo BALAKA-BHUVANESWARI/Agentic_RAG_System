@@ -139,10 +139,24 @@ def _append_jsonl(path: Path, record: BaseModel) -> None:
         os.fsync(f.fileno())
 
 
+_REPLACE_ATTEMPTS = 20
+_REPLACE_WAIT_SECONDS = 0.1
+
+
 def _write_json(path: Path, data: Any) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
-    tmp.replace(path)  # atomic: readers never see half a file
+    # Atomic: readers never see half a file. On Windows os.replace raises PermissionError while
+    # another handle (the dashboard polling the file, an antivirus scan) is open on it, so retry
+    # briefly instead of failing a finished run at its last step.
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            tmp.replace(path)
+            return
+        except PermissionError:
+            if attempt == _REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(_REPLACE_WAIT_SECONDS)
 
 
 def headline(summary: dict[str, Any]) -> dict[str, Any]:
