@@ -41,6 +41,7 @@ def settings_snapshot(s: Settings) -> dict[str, Any]:
         "llm_model": s.groq_model, "reasoning_effort": s.groq_reasoning_effort, "temperature": s.groq_temperature, "top_p": s.groq_top_p,
         "rerank_enabled": s.rerank_enabled, "rerank_model": s.rerank_model_name if s.rerank_enabled else None,
         "rerank_candidates": s.rerank_candidates if s.rerank_enabled else None,
+        "retrieval_max_chunks_per_doc": s.retrieval_max_chunks_per_doc,
         "embedding_model": s.embedding_model_name, "retrieval_top_k": s.retrieval_top_k, "retrieval_min_score": s.retrieval_min_score,
         "private_evidence_threshold": s.private_evidence_threshold, "external_evidence_threshold": s.external_evidence_threshold,
         "max_rewrite_retries": s.max_rewrite_retries, "max_validation_revisions": s.max_validation_revisions,
