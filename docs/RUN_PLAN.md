@@ -99,8 +99,8 @@ will read "not distinguishable"; that is the honest outcome, not a failure.
 
 ### Day 3, Wednesday 25 Nov: refresh the documents (no tokens)
 
-Claude updates the README results table from runs `fresh-1` and `test-1` only (68 questions that were not tuned on), adds finding 10 to
-`docs/FINDINGS.md`, and updates the status file. No claim about "agentic is better" unless an interval excludes zero.
+Claude updates the README results table from runs `fresh-1` and `test-1` only (68 questions that were not tuned on), adds finding 11 (the
+result) to `docs/FINDINGS.md`, and updates the status file. No claim about "agentic is better" unless an interval excludes zero.
 
 The tables are generated, not typed. On any day after the runs finish (no tokens, no keys):
 
@@ -139,4 +139,6 @@ from the saved run, to measure how often the judge agrees with a person. Until t
 
 * It will give one clean (but small and same-author) comparison of baseline and agentic, plus the test-split number.
 * It will not prove that agentic is better; at these sizes only a large difference would show.
+* It will not say anything about conflicting documents. The tables show "overall correct" with and without the `conflicting` category (C01-C06 and
+  F29-F31; finding 10, decided before any fresh or test run) because those labels expect a conflict notice about a document that is now marked superseded.
 * Each failed question is a lead. Reading the saved answers (as with X02, C01 and X18 in finding 9) matters more than the rates.

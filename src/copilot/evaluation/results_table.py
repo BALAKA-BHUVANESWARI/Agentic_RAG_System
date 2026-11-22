@@ -25,9 +25,18 @@ NA = "n/a"
 MODE_ORDER = ("baseline", "grade", "agentic")
 MODE_LABEL = {"baseline": "Baseline RAG", "grade": "Grader only (ablation rung)", "agentic": "Agentic workflow"}
 
+# The `conflicting` category (C01-C06 and F29-F31) expects the older edition of the password policy to be stated as a live conflict, but that
+# document is now marked superseded, so a system that follows its status states only the current rule (docs/FINDINGS.md, finding 10).
+# Pre-registered 2026-11-22, before any run on the fresh block or the test split: results are shown with and without the category, and no
+# claim about conflicting documents is made. Excluded by the category recorded in cases.jsonl, not by a list of ids.
+CONFLICTING_CATEGORY = "conflicting"
+WITHOUT_CONFLICTING = ("answer", "overall_correct_without_conflicting")
+DERIVED_KEYS = frozenset({WITHOUT_CONFLICTING[1]})
+
 # (row label, summary section, metric key). A system without the metric (the baseline has no routing) shows n/a.
 RATE_ROWS: tuple[tuple[str, str, str], ...] = (
     ("Overall correct", "answer", "overall_correct_rate"),
+    ("Overall correct, without the conflicting category", "answer", WITHOUT_CONFLICTING[1]),
     ("Answerable questions answered correctly", "answer", "answer_correct_rate"),
     ("False abstentions", "answer", "false_abstention_rate"),
     ("Correct abstentions", "answer", "correct_abstention_rate"),
@@ -110,11 +119,44 @@ def read_case_ids(summary_path: Path) -> frozenset[str] | None:
         return None
 
 
+def read_case_outcomes(summary_path: Path) -> dict[str, list[tuple[str, bool]]] | None:
+    """``{system: [(category, correct), ...]}`` from the run's ``cases.jsonl`` (None when absent or unreadable); unscored rows are left out."""
+    f = summary_path.with_name("cases.jsonl")
+    if not f.is_file():
+        return None
+    out: dict[str, list[tuple[str, bool]]] = {}
+    try:
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                row = json.loads(line)
+                correct = (row.get("scores") or {}).get("correct")
+                if isinstance(correct, bool):
+                    out.setdefault(row["mode"], []).append((str(row["category"]), correct))
+    except (ValueError, KeyError, TypeError):
+        return None
+    return out
+
+
+def add_without_conflicting_rate(view: RunView, outcomes: dict[str, list[tuple[str, bool]]] | None) -> None:
+    """Derive "overall correct without the conflicting category" per system from the recorded case outcomes.
+
+    Skipped for a system unless every one of its units was scored, so the counts always add up to the summary's overall rate.
+    """
+    for mode, system in view.systems.items():
+        overall = system.rates.get(("answer", "overall_correct_rate"))
+        rows = (outcomes or {}).get(mode)
+        if overall is None or rows is None or len(rows) != overall[1]:
+            continue
+        excluded = [ok for category, ok in rows if category == CONFLICTING_CATEGORY]
+        system.rates[WITHOUT_CONFLICTING] = (overall[0] - sum(excluded), overall[1] - len(excluded))
+
+
 def load_run_view(run: str | Path, results_dir: Path) -> RunView:
-    """Summary plus the ids of the questions that were run, ready for rendering or pooling."""
+    """Summary plus the ids and outcomes of the questions that were run, ready for rendering or pooling."""
     path = _find_summary(run, results_dir)
     view = run_view(json.loads(path.read_text(encoding="utf-8")))
     view.case_ids = read_case_ids(path)
+    add_without_conflicting_rate(view, read_case_outcomes(path))
     return view
 
 
@@ -187,7 +229,7 @@ def pool(runs: list[RunView]) -> RunView:
     for mode in first.systems:
         views = [r.systems[mode] for r in runs]
         total = sum(v.n_cases for v in views)
-        keys = {k for v in views for k in v.rates}
+        keys = {k for v in views for k in v.rates if k[1] not in DERIVED_KEYS or all(k in w.rates for w in views)}  # a derived rate needs every run
         lat = [v for v in views if v.lat_avg_ms is not None]
         systems[mode] = SystemView(
             rates={k: (sum(v.rates.get(k, (0, 0))[0] for v in views), sum(v.rates.get(k, (0, 0))[1] for v in views)) for k in keys},
@@ -239,10 +281,21 @@ def _label(mode: str) -> str:
     return MODE_LABEL.get(mode, mode)
 
 
+def _shown_rows(run: RunView) -> list[tuple[str, str, str]]:
+    """RATE_ROWS, leaving out a derived row when no system has a different count from the row it derives from (nothing was excluded)."""
+    def excluded_something(v: SystemView) -> bool:
+        derived = v.rates.get(WITHOUT_CONFLICTING)
+        return derived is not None and derived != v.rates.get(("answer", "overall_correct_rate"))
+
+    keep = any(excluded_something(v) for v in run.systems.values())
+    return [r for r in RATE_ROWS if r[2] not in DERIVED_KEYS or keep]
+
+
 def render_run(run: RunView, warnings: list[str] | None = None) -> str:
     """Markdown for one run (or one pooled set): facts, caveats, the results table and the interval table."""
     modes = list(run.systems)
     s = run.settings
+    shown = _shown_rows(run)
     out: list[str] = [f"### {'Pooled runs' if run.pooled_from else 'Run'} `{run.run_id}`", ""]
     facts = [f"model `{s.get('llm_model', '?')}`", f"reranker {'on' if s.get('rerank_enabled') else 'off'}", f"LLM judge {'on' if run.judge_enabled else 'off'}",
              f"top-k {s.get('retrieval_top_k', '?')}", f"minimum retrieval score {s.get('retrieval_min_score', '?')}", f"{run.n_questions} questions per system",
@@ -256,15 +309,17 @@ def render_run(run: RunView, warnings: list[str] | None = None) -> str:
         notes.append("The LLM judge was off, so faithfulness and answer relevance were not measured; do not read the n/a faithfulness row as a pass.")
     if run.pooled_from:
         notes.append("Pooled by adding the counts behind each rate; P95 latency cannot be pooled. The runs cover different questions, so this is not a repeat of one experiment.")
+    if len(shown) == len(RATE_ROWS):
+        notes.append("The row without the conflicting category is shown because its labels (C01-C06, F29-F31) expect the older edition of the password policy, which is now marked superseded: a system that states only the current rule scores incorrect on them (docs/FINDINGS.md, finding 10). No claim about conflicting documents is made from this run.")
     notes.append("Intervals reflect which questions were asked, not LLM sampling noise between repeated runs.")
     out += [f"> {n}" for n in notes] + [""]
 
-    rows = [[label] + [_rate_cell(run.systems[m], sec, key) for m in modes] for label, sec, key in RATE_ROWS]
+    rows = [[label] + [_rate_cell(run.systems[m], sec, key) for m in modes] for label, sec, key in shown]
     rows.append(["Average / P95 latency"] + [f"{_seconds(run.systems[m].lat_avg_ms)} / {_seconds(run.systems[m].lat_p95_ms)}" for m in modes])
     rows.append(["Total tokens"] + [f"{run.systems[m].tokens:,}" for m in modes])
     rows.append(["Approx. cost (USD)"] + [f"{run.systems[m].cost_usd:.3f}" for m in modes])
     out += _table(["Metric"] + [_label(m) for m in modes], rows) + ["", "**95% Wilson intervals for the same rates** (from the counts above)", ""]
-    out += _table(["Metric"] + [_label(m) for m in modes], [[label] + [_interval_cell(run.systems[m], sec, key) for m in modes] for label, sec, key in RATE_ROWS]) + [""]
+    out += _table(["Metric"] + [_label(m) for m in modes], [[label] + [_interval_cell(run.systems[m], sec, key) for m in modes] for label, sec, key in shown]) + [""]
 
     ret = (run.retrieval or {}).get("metrics") or {}
     if ret and not run.pooled_from:

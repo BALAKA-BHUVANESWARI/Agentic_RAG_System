@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from copilot.evaluation.results_table import (
-    SMALL_SAMPLE, check_finished, load_run_view, load_summary, pool, read_case_ids, render_many, render_run, run_view,
+    SMALL_SAMPLE, CONFLICTING_CATEGORY, WITHOUT_CONFLICTING, check_finished, load_run_view, load_summary, pool, read_case_ids, render_many, render_run, run_view,
 )
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "render_results.py"
@@ -253,3 +253,82 @@ def test_script_exits_2_with_a_reason_for_unfinished_runs_and_bad_pools(tmp_path
     assert _script().main(["full", "full", "--pool", "--results-dir", str(tmp_path)]) == 2
     assert "counted twice" in capsys.readouterr().err
     assert _script().main(["missing", "--results-dir", str(tmp_path)]) == 2
+
+
+# ------------------------------------------------------------------------------ the row without the conflicting category (finding 10)
+CONFLICTING_ROW = "Overall correct, without the conflicting category"
+
+
+def _write_scored_run(root: Path, run_id: str, outcomes: dict[str, dict[str, tuple[str, bool]]], *, den: int | None = None) -> Path:
+    """A run folder whose summary totals agree with ``outcomes`` (``{system: {case_id: (category, correct)}}``)."""
+    folder = root / run_id
+    folder.mkdir(parents=True)
+    n = den if den is not None else len(outcomes["baseline"])
+    totals = {m: (sum(ok for _, ok in rows.values()), n) for m, rows in outcomes.items()}
+    (folder / "summary.json").write_text(json.dumps(make_summary(run_id, n=n, overall=(totals["baseline"], totals["agentic"]), sha=f"sha-{run_id}")), encoding="utf-8")
+    lines = [json.dumps({"case_id": c, "category": cat, "mode": m, "scores": {"correct": ok}}) for m, rows in outcomes.items() for c, (cat, ok) in rows.items()]
+    (folder / "cases.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return folder
+
+
+def _with_conflicting() -> dict[str, dict[str, tuple[str, bool]]]:
+    """Three conflicting cases plus seven others: baseline misses all three and one other (6/10), agentic gets one conflicting and every other (8/10)."""
+    others = [f"D{i:02d}" for i in range(1, 8)]
+    c = CONFLICTING_CATEGORY
+    return {
+        "baseline": {"C01": (c, False), "C02": (c, False), "C03": (c, False), **{o: ("direct_kb", o != "D07") for o in others}},
+        "agentic": {"C01": (c, False), "C02": (c, True), "C03": (c, False), **{o: ("direct_kb", True) for o in others}},
+    }
+
+
+def test_the_excluded_category_is_the_conflicting_one_named_in_finding_10():
+    assert CONFLICTING_CATEGORY == "conflicting" and WITHOUT_CONFLICTING == ("answer", "overall_correct_without_conflicting")
+
+
+def test_row_without_the_conflicting_category_is_shown_beside_the_overall_rate(tmp_path):
+    _write_scored_run(tmp_path, "r", _with_conflicting())
+    text = render_run(load_run_view("r", tmp_path))
+    assert "| Overall correct | 60% (6/10) | 80% (8/10) |" in text
+    assert f"| {CONFLICTING_ROW} | 86% (6/7) | 100% (7/7) |" in text                  # baseline 6 correct of 7, agentic 7 of 7
+    assert f"| {CONFLICTING_ROW} | 86% [" in text                                         # and the interval table carries it too
+    assert "C01-C06, F29-F31" in text and "No claim about conflicting documents" in text
+
+
+def test_the_category_decides_not_the_case_id(tmp_path):
+    rows = {m: {f"D{i:02d}": ("direct_kb", True) for i in range(1, 9)} for m in ("baseline", "agentic")}
+    for m in rows:
+        rows[m]["F29"] = (CONFLICTING_CATEGORY, False)                                  # a fresh-block conflicting case is excluded
+        rows[m]["C99"] = ("direct_kb", False)                                           # an id that looks like one is not, unless its category says so
+    _write_scored_run(tmp_path, "r", rows)
+    text = render_run(load_run_view("r", tmp_path))
+    assert f"| {CONFLICTING_ROW} | 89% (8/9) | 89% (8/9) |" in text
+
+
+def test_row_is_left_out_when_nothing_was_excluded(tmp_path):
+    ids = {m: {f"D{i:02d}": ("direct_kb", i % 2 == 0) for i in range(1, 11)} for m in ("baseline", "agentic")}
+    _write_scored_run(tmp_path, "r", ids)
+    text = render_run(load_run_view("r", tmp_path))
+    assert CONFLICTING_ROW not in text and "F29-F31" not in text
+
+
+def test_row_needs_case_outcomes_and_every_unit_scored(tmp_path):
+    _write_run(tmp_path, "no-cases")                                                # summary only: nothing to derive from
+    assert CONFLICTING_ROW not in render_run(load_run_view("no-cases", tmp_path))
+    partial = _with_conflicting()
+    partial["baseline"].pop("D07")                                                  # one baseline unit unscored: 9 rows for 10 questions
+    _write_scored_run(tmp_path, "partial", partial, den=10)
+    text = render_run(load_run_view("partial", tmp_path))
+    assert f"| {CONFLICTING_ROW} | n/a | 100% (7/7) |" in text                       # the baseline cannot be split, the agentic system can
+
+
+def test_pooling_adds_the_derived_counts_and_needs_every_run_to_have_them(tmp_path):
+    _write_scored_run(tmp_path, "a", _with_conflicting())
+    other = {m: {f"D{i:02d}": ("direct_kb", True) for i in range(11, 21)} for m in ("baseline", "agentic")}
+    other["baseline"]["D20"] = ("direct_kb", False)                                  # baseline 9/10, agentic 10/10, no conflicting cases
+    _write_scored_run(tmp_path, "b", other)
+    a, b = load_run_view("a", tmp_path), load_run_view("b", tmp_path)
+    text = render_run(pool([a, b]))
+    assert f"| {CONFLICTING_ROW} | 88% (15/17) | 100% (17/17) |" in text                # (6+9)/(7+10) and (7+10)/(7+10)
+    plain = run_view(make_summary("c", sha="sha-c"))
+    plain.case_ids = frozenset({"Z01"})                                              # no derived rate: its questions cannot be split
+    assert CONFLICTING_ROW not in render_run(pool([a, plain]))
