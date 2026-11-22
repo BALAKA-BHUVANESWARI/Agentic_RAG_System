@@ -46,6 +46,7 @@ were computed on all cases), so pass `--split dev` when tuning from now on.
   the routing rules, but after its authors had seen what failed. The honest way to get a clean test set is to write
   new questions *after* the freeze, without looking at system output, add them with `--add-new`, and report on those.
   Twenty to thirty fresh questions written that way are worth more than the current 28.
+  A block of 40 now exists as a separate file, [FRESH_QUESTIONS.md](FRESH_QUESTIONS.md); it has not been run yet.
 * 28 questions is small. One question is 3.6 points of the test split; read the intervals (`docs/ABLATION.md`) before
   concluding anything from a difference.
 * The split protects against *human* tuning on test cases. It does not control LLM sampling noise between runs.
