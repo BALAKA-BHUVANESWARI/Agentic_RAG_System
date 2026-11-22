@@ -60,6 +60,8 @@ Expect for the single question: a path that contains `private_retriever` and `pr
 declined, `private_first` not scored, 0 unnecessary external searches. If any of them is *answered*, that is the residual risk named in routing
 invariant 1 (a score above 0.25 and a grader that accepted weak chunks); record the question and the answer in `docs/FINDINGS.md`.
 
+**Day 0 result (22 Nov, done):** the five dev out-of-scope questions were all declined (no grader call, no web search); X18 still declined, because the grader rejected its evidence. Both are recorded in finding 9; nothing was changed.
+
 ### Day 1, Monday 23 Nov, from about 19:45 IST: the fresh block (about 212,000 tokens)
 
 Purpose: the only evidence in the project that was not available while tuning. Judge off (the judge has not been checked against human labels).
