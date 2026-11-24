@@ -148,3 +148,21 @@ Implementing B showed two things that make it smaller than the text of Experimen
 
 The hypothesis, primary measure and decision rule of B are unchanged. No result had been seen when this amendment was written.
 
+## Amendment 3 (2026-11-24, before any run or result): what experiment C is, exactly, and its dev-only step
+
+* **Where it runs.** In the `private_retriever` node, only for the first retrieval of a request (retry count 0, no rewritten query), only when
+  `RETRIEVAL_QUERY_EXPANSION` is 1 or 2. One extra LLM call (`EXPANDER_SYSTEM_PROMPT`, text frozen with this amendment) returns up to that many
+  paraphrases; `Retriever.retrieve` runs for the original question and for each paraphrase (so access filtering happens for every query); `merge_retrievals`
+  keeps each chunk's best cosine score and the top `RETRIEVAL_TOP_K`, ties going to the original question's order. The grader, the generator, the
+  external search and the audit `question` still see only the original question; the paraphrases are recorded in the trace event and the retrieval
+  attempt (`expanded_queries`). A failed expansion, a failed paraphrase lookup, a question with a pasted secret, or the flag off leaves the request exactly
+  as without the flag. A rewrite retry never expands again.
+* **Dev-only step (the only tuning allowed).** `scripts/eval_expansion_ab.py` generates two paraphrases per dev question that names expected documents
+  (about 300 tokens each, a few tens of questions, saved to `paraphrases.json` so a rerun costs nothing), ranks three arms with the application's own retrieval
+  (`control`: original only; `para1`: original + first paraphrase; `para2`: original + both), and applies this rule from `evaluation/expansion_ab.py`:
+  an arm is *harmful* if any document metric (`doc_recall@1/3/5`, `doc_mrr`, `doc_ndcg@5`) is `worse` than the control under the paired rule (interval excludes
+  zero, at least 10 questions); among arms that are not harmful take the higher mean `doc_mrr`, keeping `para1` unless `para2` is higher by at least 0.005; if both
+  are harmful, the outcome is `rejected_on_dev`, C stops, and nothing is run on fresh-2. The test split, `fresh-1` and `fresh-2` are not used in this step.
+* **Then fresh-2.** `f2-C` uses the chosen value. The primary measure and decision rule of C above are unchanged (document recall@5 and MRR on the 14
+  paraphrase and vague-symptom cases from the saved retrieval rows; guard rails as in the common design). No result had been seen when this amendment was written.
+

@@ -112,6 +112,12 @@ class Settings(BaseSettings):
     agent_use_grader: bool = Field(default=True, description="False skips the LLM evidence grader: any retrieved chunk counts as sufficient (nothing retrieved still abstains).")
     agent_use_validator: bool = Field(default=True, description="False skips the final LLM grounding check; citation marker checks in the answer generator still run.")
     # EXPERIMENTS A and B (docs/POST_DAY3_EXPERIMENTS.md): default OFF so every recorded run keeps its meaning.
+    retrieval_query_expansion: int = Field(
+        default=0, ge=0, le=2,
+        description="EXPERIMENT C: 0 = off. 1 or 2 = before the FIRST private retrieval only, one extra LLM call writes that many "
+                    "short paraphrases of the question; retrieval runs for the original and each paraphrase and the results are merged "
+                    "by best score. The grader and the answer generator still see only the original question.",
+    )
     partial_private_evidence: bool = Field(
         default=False,
         description="True: when the classifier intent is 'both', the private grader found supporting chunks with confidence at or above "

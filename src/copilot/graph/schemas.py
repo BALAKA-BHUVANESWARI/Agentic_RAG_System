@@ -53,6 +53,12 @@ class PrivateGrade(BaseModel):
     _clamp = field_validator("confidence", mode="before")(_unit_interval)
 
 
+class QueryExpansion(BaseModel):
+    """Output of the optional first-retrieval query expansion (experiment C)."""
+
+    paraphrases: list[str] = Field(default_factory=list)
+
+
 class QueryRewrite(BaseModel):
     """Output of the query rewriter node."""
 

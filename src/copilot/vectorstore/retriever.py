@@ -37,6 +37,30 @@ def limit_per_document(chunks: list[RetrievedChunk], cap: int, k: int) -> list[R
     return [chunks[i] for i in sorted(selected)]
 
 
+def merge_retrievals(results: list[RetrievalResult], k: int) -> RetrievalResult:
+    """Merge several retrievals of paraphrases of one question into one top-``k`` result (experiment C).
+
+    Every input already holds only chunks the role may read (access filtering happens inside ``Retriever.retrieve``), so the merge
+    adds no retrieval path of its own. A chunk found by several queries keeps its best cosine score; ties keep first-seen order, so the
+    original question's ranking wins ties. ``results[0]`` is the original question's result.
+    """
+    base = results[0]
+    if len(results) == 1 or base.status == "no_access":
+        return base
+    best: dict[str, RetrievedChunk] = {}
+    for r in results:
+        for c in r.chunks:
+            if c.chunk_id not in best or c.score > best[c.chunk_id].score:
+                best[c.chunk_id] = c
+    ranked = sorted(best.values(), key=lambda c: c.score, reverse=True)[:k]
+    return base.model_copy(update={
+        "chunks": ranked, "status": "ok" if ranked else "empty",
+        "dropped_unauthorized": sum(r.dropped_unauthorized for r in results),
+        "dropped_low_score": sum(r.dropped_low_score for r in results),
+        "reranked": any(r.reranked for r in results),
+    })
+
+
 class Retriever:
     """Access-filtered semantic retrieval over the Pinecone index."""
 

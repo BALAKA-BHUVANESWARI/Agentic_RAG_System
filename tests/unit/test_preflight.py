@@ -44,6 +44,7 @@ def test_good_settings_all_pass_and_the_values_in_use_are_shown():
     ({"agent_use_validator": False}, "full agent", "fail", "ablation rung"),
     ({"external_label_check_in_code": True}, "experiment flags", "warn", "A external_label_check_in_code"),
     ({"partial_private_evidence": True}, "experiment flags", "warn", "B partial_private_evidence"),
+    ({"retrieval_query_expansion": 2}, "experiment flags", "warn", "C retrieval_query_expansion"),
     ({"external_search_enabled": False}, "web search enabled", "warn", "can only abstain"),
     ({"has_groq_key": False}, "Groq key", "fail", "GROQ_API_KEY is missing"),
     ({"has_pinecone_key": False}, "Pinecone key", "fail", "PINECONE_API_KEY is missing"),

@@ -50,6 +50,7 @@ class CopilotState(TypedDict, total=False):
     current_query: str
     retry_count: int
     rewrite_failed: bool
+    expanded_queries: list[str]
     rewritten_queries: Annotated[list[str], operator.add]
     retrieved_chunks: list[dict]
     retrieval_attempts: Annotated[list[dict], operator.add]
