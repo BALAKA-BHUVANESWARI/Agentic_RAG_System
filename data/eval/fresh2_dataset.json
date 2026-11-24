@@ -1,0 +1,1045 @@
+{
+  "version": 1,
+  "description": "FRESH-2 held-out evaluation block (G01-G44) for the IT Support Copilot, written on 2026-11-24 for the post-Day-3 experiments in docs/POST_DAY3_EXPERIMENTS.md. Written AFTER fresh-1 and test-1 were run and read, WITHOUT running the system on any of these questions and without looking at its output for them; the author knew the failure patterns found in fresh-1 and test-1 (see docs/FRESH2_QUESTIONS.md). Labels refer to the SYNTHETIC DEMO knowledge base in data/kb_documents; none of this reflects real company policy. Report-only: do not tune on it.",
+  "cases": [
+    {
+      "id": "G01",
+      "category": "direct_kb",
+      "question": "What am I not allowed to put inside my password?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "no name, username or company name",
+          "keywords": [
+            "username",
+            "company name"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G02",
+      "category": "direct_kb",
+      "question": "How long until I get a loaner laptop if mine will not start at all?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "normally within 1 business day",
+          "keywords": [
+            "1 business day"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G03",
+      "category": "direct_kb",
+      "question": "What must I include in a ticket when my laptop shows a blue screen?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "the stop code shown on screen",
+          "keywords": [
+            "stop code"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G04",
+      "category": "direct_kb",
+      "question": "What are the data classification levels at the company?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "Public, Internal, Confidential, Restricted",
+          "keywords": [
+            "public",
+            "internal",
+            "confidential",
+            "restricted"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G05",
+      "category": "direct_kb",
+      "question": "Where can I find the Reset Teams shortcut?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "in Acme Software Center",
+          "keywords": [
+            "acme software center"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G06",
+      "category": "direct_kb",
+      "question": "Who has to approve the use of a break-glass account?",
+      "role": "admin",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Admin_Account_Recovery_Procedure.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "IT Director and Head of Security",
+          "keywords": [
+            "it director",
+            "head of security"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Admin_Account_Recovery_Procedure.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "admin role: the document is restricted"
+    },
+    {
+      "id": "G07",
+      "category": "paraphrased",
+      "question": "How much of my laptop's drive should stay empty to keep it running well?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "at least 10 percent free",
+          "keywords": [
+            "10"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G08",
+      "category": "paraphrased",
+      "question": "Where is the button for flagging a suspicious email?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "Report Phishing button in Outlook",
+          "keywords": [
+            "report phishing"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G09",
+      "category": "paraphrased",
+      "question": "May I paste a customer's home address into a Teams chat to save time?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "customer personal data must not be posted in chat",
+          "keywords": [
+            "personal data"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G10",
+      "category": "paraphrased",
+      "question": "Can I give myself admin rights on my work laptop so I can install tools?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "employees do not have local administrator rights",
+          "keywords": [
+            "administrator"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G11",
+      "category": "paraphrased",
+      "question": "Do I need the second sign-in step when I open the intranet?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "MFA is mandatory, including the intranet",
+          "keywords": [
+            "intranet"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G12",
+      "category": "paraphrased",
+      "question": "Am I supposed to warn my colleagues before I record a meeting?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "tell participants when you start recording",
+          "keywords": [
+            "participants"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G13",
+      "category": "paraphrased",
+      "question": "If I tell IT that my phone has gone missing, what will they do to it?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "lock and wipe remotely",
+          "keywords": [
+            "wipe"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G14",
+      "category": "paraphrased",
+      "question": "Where do I go on the web to register my phone for the second sign-in step?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "mfa.acme-demo.example",
+          "keywords": [
+            "mfa.acme-demo.example"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G15",
+      "category": "needs_rewriting",
+      "question": "My laptop dies after barely any time off the charger.",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "replace the battery if under 2 hours",
+          "keywords": [
+            "2 hours"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G16",
+      "category": "needs_rewriting",
+      "question": "I am away from the office and the HR website will not load.",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "use the VPN",
+          "keywords": [
+            "vpn"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G17",
+      "category": "needs_rewriting",
+      "question": "Nothing happens when I plug my memory stick into my laptop.",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "USB storage is blocked",
+          "keywords": [
+            "blocked"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Internal_Security_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G18",
+      "category": "needs_rewriting",
+      "question": "I wanted to replay a meeting from four months ago and it is gone.",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "recordings are deleted after 120 days",
+          "keywords": [
+            "120 days"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G19",
+      "category": "needs_rewriting",
+      "question": "I downloaded an installer from the internet and my laptop will not let me run it.",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "install from Acme Software Center",
+          "keywords": [
+            "software center"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G20",
+      "category": "needs_rewriting",
+      "question": "My colleague uses a MacBook. Do our software install rules cover her laptop too?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "applies to Windows and macOS laptops",
+          "keywords": [
+            "macos"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Software_Installation_Procedure.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G21",
+      "category": "insufficient_private",
+      "question": "How do I request a new keyboard and mouse?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "plausible IT question the documents do not answer: must abstain and must not search the web"
+    },
+    {
+      "id": "G22",
+      "category": "insufficient_private",
+      "question": "How do I change the display name shown on my Teams profile?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "plausible IT question the documents do not answer: must abstain and must not search the web"
+    },
+    {
+      "id": "G23",
+      "category": "insufficient_private",
+      "question": "What is the process for returning my laptop when I leave the company?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "plausible IT question the documents do not answer: must abstain and must not search the web"
+    },
+    {
+      "id": "G24",
+      "category": "insufficient_private",
+      "question": "How many days of notice does IT need to prepare a laptop for a new starter?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "plausible IT question the documents do not answer: must abstain and must not search the web"
+    },
+    {
+      "id": "G25",
+      "category": "current_external",
+      "question": "How much storage does Microsoft say a PC needs to install Windows 11?",
+      "role": "employee",
+      "expected_route": "private_then_external",
+      "expected_documents": [],
+      "expected_answer_points": [
+        {
+          "text": "64 GB",
+          "keywords": [
+            "64 gb"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "FRESH-2 external case: a stable public vendor fact; whether it is answered depends on the live web results, so one run is an observation, not a result"
+    },
+    {
+      "id": "G26",
+      "category": "current_external",
+      "question": "What is the name of the Microsoft site where IT administrators can read Windows release information?",
+      "role": "employee",
+      "expected_route": "private_then_external",
+      "expected_documents": [],
+      "expected_answer_points": [
+        {
+          "text": "Windows release health",
+          "keywords": [
+            "release health"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "FRESH-2 external case: a stable public vendor fact; whether it is answered depends on the live web results, so one run is an observation, not a result"
+    },
+    {
+      "id": "G27",
+      "category": "current_external",
+      "question": "On which day of the month does Microsoft normally release its regular Windows security updates?",
+      "role": "employee",
+      "expected_route": "private_then_external",
+      "expected_documents": [],
+      "expected_answer_points": [
+        {
+          "text": "second Tuesday (Patch Tuesday)",
+          "keywords": [
+            "tuesday"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "FRESH-2 external case: a stable public vendor fact; whether it is answered depends on the live web results, so one run is an observation, not a result"
+    },
+    {
+      "id": "G28",
+      "category": "current_external",
+      "question": "Which Windows 11 editions does Microsoft say can accept incoming Remote Desktop connections?",
+      "role": "employee",
+      "expected_route": "private_then_external",
+      "expected_documents": [],
+      "expected_answer_points": [
+        {
+          "text": "Pro and higher editions, not Home",
+          "keywords": [
+            "pro"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "FRESH-2 external case: a stable public vendor fact; whether it is answered depends on the live web results, so one run is an observation, not a result"
+    },
+    {
+      "id": "G29",
+      "category": "current_external",
+      "question": "How long are Teams meeting recordings kept at our company, and where does Microsoft say an administrator can see the current status of its cloud services?",
+      "role": "employee",
+      "expected_route": "private_plus_external",
+      "expected_documents": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "recordings kept 120 days",
+          "keywords": [
+            "120 days"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "Microsoft 365 service health",
+          "keywords": [
+            "service health"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [
+        "Microsoft_Teams_Usage_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "FRESH-2 mixed case (Scenario C): the private half is in the documents, the external half is a stable public vendor fact; the system should answer the private half and label the public half; depends on the live web"
+    },
+    {
+      "id": "G30",
+      "category": "current_external",
+      "question": "How often does our laptop guide say to restart, and which version does Microsoft call the last release of Windows 10?",
+      "role": "employee",
+      "expected_route": "private_plus_external",
+      "expected_documents": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "restart at least once a week",
+          "keywords": [
+            "once a week"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "version 22H2",
+          "keywords": [
+            "22h2"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [
+        "Laptop_Troubleshooting_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "FRESH-2 mixed case (Scenario C): the private half is in the documents, the external half is a stable public vendor fact; the system should answer the private half and label the public half; depends on the live web"
+    },
+    {
+      "id": "G31",
+      "category": "current_external",
+      "question": "Is split tunneling allowed on our VPN, and what does Microsoft recommend for sending Microsoft 365 traffic through a VPN?",
+      "role": "employee",
+      "expected_route": "private_plus_external",
+      "expected_documents": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "split tunneling is disabled",
+          "keywords": [
+            "disabled"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "Microsoft's Optimize endpoints",
+          "keywords": [
+            "optimize"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [
+        "VPN_Connection_Guide.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "FRESH-2 mixed case (Scenario C): the private half is in the documents, the external half is a stable public vendor fact; the system should answer the private half and label the public half; depends on the live web"
+    },
+    {
+      "id": "G32",
+      "category": "current_external",
+      "question": "What does our MFA guide require of administrators besides the authenticator app, and does Microsoft support passwordless sign-in with security keys?",
+      "role": "employee",
+      "expected_route": "private_plus_external",
+      "expected_documents": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "a hardware security key",
+          "keywords": [
+            "hardware security key"
+          ],
+          "source": "private"
+        },
+        {
+          "text": "FIDO2",
+          "keywords": [
+            "fido2"
+          ],
+          "source": "external"
+        }
+      ],
+      "expected_citations": [
+        "MFA_Guidelines.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "FRESH-2 mixed case (Scenario C): the private half is in the documents, the external half is a stable public vendor fact; the system should answer the private half and label the public half; depends on the live web"
+    },
+    {
+      "id": "G33",
+      "category": "unanswerable",
+      "question": "What is the name of the IT Director?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "undocumented or restricted detail: should abstain without a web search"
+    },
+    {
+      "id": "G34",
+      "category": "unanswerable",
+      "question": "What time does the IT service desk open in the morning?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "undocumented or restricted detail: should abstain without a web search"
+    },
+    {
+      "id": "G35",
+      "category": "unanswerable",
+      "question": "Which floor of the office is the server room on?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "undocumented or restricted detail: should abstain without a web search"
+    },
+    {
+      "id": "G36",
+      "category": "unanswerable",
+      "question": "What is the phone number of the on-call line for critical incidents?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "undocumented or restricted detail: should abstain without a web search"
+    },
+    {
+      "id": "G37",
+      "category": "unanswerable",
+      "question": "How long is the sealed break-glass credential envelope valid?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [
+        "security safe"
+      ],
+      "expects_conflict_notice": false,
+      "notes": "undocumented or restricted detail: should abstain without a web search (restricted document; a leak check keyword)"
+    },
+    {
+      "id": "G38",
+      "category": "unanswerable",
+      "question": "What is the budget for next year's laptop refresh?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "undocumented or restricted detail: should abstain without a web search"
+    },
+    {
+      "id": "G39",
+      "category": "unanswerable",
+      "question": "Which antivirus product runs on company laptops?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "undocumented or restricted detail: should abstain without a web search"
+    },
+    {
+      "id": "G40",
+      "category": "unanswerable",
+      "question": "What happens to my Teams chat history when I leave the company?",
+      "role": "employee",
+      "expected_route": "abstain",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "undocumented or restricted detail: should abstain without a web search"
+    },
+    {
+      "id": "G41",
+      "category": "out_of_scope",
+      "question": "How tall is Mount Everest?",
+      "role": "employee",
+      "expected_route": "out_of_scope",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G42",
+      "category": "out_of_scope",
+      "question": "Give me a seven-day workout plan.",
+      "role": "employee",
+      "expected_route": "out_of_scope",
+      "expected_documents": [],
+      "expected_answer_points": [],
+      "expected_citations": [],
+      "expected_abstention": true,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": ""
+    },
+    {
+      "id": "G43",
+      "category": "conflicting",
+      "question": "Is a password of 10 characters acceptable?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "no, the minimum is 14 characters",
+          "keywords": [
+            "14 characters"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "category kept for the runner's all-eight-categories rule. Written after finding 10: it expects the CURRENT rule only, because the older edition is marked superseded; reported with and without the conflicting category; no conflict-handling claim"
+    },
+    {
+      "id": "G44",
+      "category": "conflicting",
+      "question": "Can I reuse the password I had last month?",
+      "role": "employee",
+      "expected_route": "private_only",
+      "expected_documents": [
+        "Password_Policy.txt"
+      ],
+      "expected_answer_points": [
+        {
+          "text": "no, the last 12 passwords may not be reused",
+          "keywords": [
+            "12"
+          ],
+          "source": "private"
+        }
+      ],
+      "expected_citations": [
+        "Password_Policy.txt"
+      ],
+      "expected_abstention": false,
+      "external_search_allowed": true,
+      "forbidden_keywords": [],
+      "expects_conflict_notice": false,
+      "notes": "category kept for the runner's all-eight-categories rule. Written after finding 10: it expects the CURRENT rule only, because the older edition is marked superseded; reported with and without the conflicting category; no conflict-handling claim"
+    }
+  ]
+}
