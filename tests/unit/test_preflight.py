@@ -42,6 +42,7 @@ def test_good_settings_all_pass_and_the_values_in_use_are_shown():
     ({"retrieval_max_chunks_per_doc": 3}, "no per-document chunk cap", "fail", "is 3"),
     ({"agent_use_grader": False}, "full agent", "fail", "ablation rung"),
     ({"agent_use_validator": False}, "full agent", "fail", "ablation rung"),
+    ({"external_label_check_in_code": True}, "experiment flags", "warn", "A external_label_check_in_code"),
     ({"external_search_enabled": False}, "web search enabled", "warn", "can only abstain"),
     ({"has_groq_key": False}, "Groq key", "fail", "GROQ_API_KEY is missing"),
     ({"has_pinecone_key": False}, "Pinecone key", "fail", "PINECONE_API_KEY is missing"),

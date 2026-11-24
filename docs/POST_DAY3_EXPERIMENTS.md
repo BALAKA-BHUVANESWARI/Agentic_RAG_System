@@ -114,3 +114,22 @@ change's flag default is switched on, in its own commit, after its result is rec
 
 Not planned: any change to retrieval thresholds, the grader or classifier prompts, labels, the frozen split or `fresh-1`; a judge run; a claim that the
 agentic system is better than the baseline.
+
+## Amendment 1 (2026-11-24, before any run or result): what experiment A actually changes
+
+Reading the code while implementing A showed that the label line is already built by code (`generation/citations.py::render_answer` adds
+`EXTERNAL_WARNING` whenever an external source is cited) and already checked by code (`final_answer_validator` adds a problem if the line is
+missing). The only open LLM judgement is `external_clearly_separated`. The treatment is therefore narrower than the text of Experiment A above:
+
+* With `EXTERNAL_LABEL_CHECK_IN_CODE` on, the LLM's `external_clearly_separated` is ignored **only** when every citation is external, each carries a
+  URL, and the rendered answer starts with the verbatim external-information line (`external_separation_by_construction`). Such an answer has no
+  company-guidance claim to be confused with public information.
+* An answer that cites any private source (Scenario C, G29-G32) is **not** covered: it still goes through the LLM judgement, and the arm reports its
+  separation rejections separately.
+* The grounding check (`grounded`, `unsupported_claims`) is unchanged and still fails closed.
+
+Consequences for the plan: the primary measure is the number of `not clearly separated` rejections among the external-only cases (G25-G28) and,
+separately, among the mixed cases (G29-G32); decision rule (i) applies to the external-only cases (0 rejections by construction), rule (ii) is read on
+the control arm's external-only cases, and rule (iv) (read every external answer in the A arm for unsupported claims) is unchanged. The decision
+rules of B and C are untouched. No result had been seen when this amendment was written.
+

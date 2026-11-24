@@ -46,6 +46,7 @@ def settings_snapshot(s: Settings) -> dict[str, Any]:
         "private_evidence_threshold": s.private_evidence_threshold, "external_evidence_threshold": s.external_evidence_threshold,
         "max_rewrite_retries": s.max_rewrite_retries, "max_validation_revisions": s.max_validation_revisions,
         "agent_use_grader": s.agent_use_grader, "agent_use_validator": s.agent_use_validator,
+        "external_label_check_in_code": s.external_label_check_in_code,
         "chunk_size": s.chunk_size, "chunk_overlap": s.chunk_overlap, "external_search_enabled": s.external_search_enabled,
         "tavily_search_depth": s.tavily_search_depth, "eval_ks": s.eval_ks, "eval_retrieval_pool": s.eval_retrieval_pool,
         "eval_answer_threshold": s.eval_answer_threshold, "eval_faithfulness_threshold": s.eval_faithfulness_threshold,

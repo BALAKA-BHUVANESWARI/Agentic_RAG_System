@@ -111,6 +111,13 @@ class Settings(BaseSettings):
     # ABLATION switches for evaluation only: they measure what each agent step buys. Every default keeps the full workflow.
     agent_use_grader: bool = Field(default=True, description="False skips the LLM evidence grader: any retrieved chunk counts as sufficient (nothing retrieved still abstains).")
     agent_use_validator: bool = Field(default=True, description="False skips the final LLM grounding check; citation marker checks in the answer generator still run.")
+    # EXPERIMENT A (docs/POST_DAY3_EXPERIMENTS.md): default OFF so every recorded run keeps its meaning.
+    external_label_check_in_code: bool = Field(
+        default=False,
+        description="True: for an answer that cites ONLY external sources and starts with the required external-information line, "
+                    "the separation of public vendor information from company guidance is decided in code and the LLM validator's "
+                    "external_clearly_separated field is ignored. Answers citing both private and external sources still use the LLM judgement.",
+    )
 
     # ---- Embeddings batching / external-call resilience ----------------
     embedding_batch_size: int = Field(default=32, ge=1)

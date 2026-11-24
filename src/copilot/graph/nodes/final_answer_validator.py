@@ -13,6 +13,22 @@ from copilot.llm.client import LLMUnavailableError, StructuredOutputError
 from copilot.llm.prompts import VALIDATOR_SYSTEM_PROMPT
 
 
+def external_separation_by_construction(ans: GeneratedAnswer) -> bool:
+    """True when the answer cannot blend company guidance with public information (experiment A, a fact code can decide).
+
+    It holds when every citation is external, each external citation carries a URL, and the rendered text starts with the
+    verbatim external-information line. Code builds that line and the Sources block from real evidence, so an answer like this
+    has no company-guidance claim for public information to be confused with. An answer that cites any private source is NOT
+    covered: whether its two kinds of claim are kept apart is still left to the LLM check.
+    """
+    cites = ans.citations
+    return bool(
+        ans.used_external and cites
+        and all(c.kind == "external" and c.url for c in cites)
+        and ans.rendered.startswith(EXTERNAL_WARNING)
+    )
+
+
 def make_final_answer_validator(deps: GraphDeps):
     """Build the ``final_answer_validator`` node."""
     s = deps.settings
@@ -72,7 +88,8 @@ def make_final_answer_validator(deps: GraphDeps):
             problems.append("unsupported claims: " + "; ".join(check.unsupported_claims or ["unspecified"]))
         if conflict_expected and not check.conflicts_communicated:
             problems.append("the sources conflict but the answer does not clearly state each version with its citation")
-        if ans.used_external and not check.external_clearly_separated:
+        separation_in_code = s.external_label_check_in_code and external_separation_by_construction(ans)
+        if ans.used_external and not check.external_clearly_separated and not separation_in_code:
             problems.append("public vendor information is not clearly separated from company guidance")
         if superseded_present and check.superseded_presented_as_current:
             problems.append("information from a superseded document is presented as the current rule; use the current document for what applies now and label the older version as superseded")
@@ -81,6 +98,7 @@ def make_final_answer_validator(deps: GraphDeps):
                    "conflicts_communicated": check.conflicts_communicated, "conflict_expected": conflict_expected,
                    "conflict_explained_by_status": explained_by_status,
                    "external_clearly_separated": check.external_clearly_separated,
+                   "external_separation_decided_in_code": bool(separation_in_code),
                    "superseded_presented_as_current": check.superseded_presented_as_current, "reasoning": check.reasoning,
                    "problems": problems}
         if not problems:
