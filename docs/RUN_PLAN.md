@@ -101,6 +101,8 @@ will read "not distinguishable"; that is the honest outcome, not a failure.
 
 ### Day 3, Wednesday 25 Nov: refresh the documents (no tokens)
 
+**Status (24 Nov, evening): Day 2 done (`test-1`, 28 questions, 56/56 units, 0 errors) and the Day 3 documents were written the same evening (pooled table in the README, finding 11); nothing below needs to be run again.**
+
 Claude updates the README results table from runs `fresh-1` and `test-1` only (68 questions that were not tuned on), adds finding 11 (the
 result) to `docs/FINDINGS.md`, and updates the status file. No claim about "agentic is better" unless an interval excludes zero.
 
