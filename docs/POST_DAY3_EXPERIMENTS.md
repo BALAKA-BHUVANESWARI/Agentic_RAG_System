@@ -166,3 +166,21 @@ The hypothesis, primary measure and decision rule of B are unchanged. No result 
 * **Then fresh-2.** `f2-C` uses the chosen value. The primary measure and decision rule of C above are unchanged (document recall@5 and MRR on the 14
   paraphrase and vague-symptom cases from the saved retrieval rows; guard rails as in the common design). No result had been seen when this amendment was written.
 
+
+### Result of the dev-only choice step (Tue 24 Nov 2026, run before any fresh-2 run)
+
+`python scripts\eval_expansion_ab.py --delay 2` on the 40 dev questions with expected documents (saved under `data/eval/results/expansion_ab_20261124T212606`, which is
+gitignored, so the numbers are recorded here). About 18,790 Groq tokens, roughly 470 per question, more than the 300 estimated above.
+
+| metric | control | para1 | para2 |
+|---|---|---|---|
+| doc_recall@1 | 0.800 | 0.825 | 0.825 |
+| doc_recall@3 | 0.975 | 0.988 | 0.988 |
+| doc_recall@5 | 0.988 | 0.988 | 0.988 |
+| doc_mrr | 0.963 | 0.975 | 0.975 |
+| doc_ndcg@5 | 0.871 | 0.896 | 0.894 |
+
+Neither arm was harmful. Only `doc_ndcg@5` excluded zero (para1 +0.025 [+0.005, +0.051]; para2 +0.023 [+0.003, +0.048]); every other metric was not distinguishable. `doc_mrr` tied,
+so the rule kept **para1**. **`f2-C` therefore runs with `RETRIEVAL_QUERY_EXPANSION=1`.** This is a dev-only choice of the paraphrase count, made on a split that was used for
+tuning and where the control already finds the expected document in the top 5 for 98.8% of questions; it is not evidence that expansion helps. Only `f2-C` on fresh-2 can show that.
+The extra cost with the flag on is about 470 tokens per question for the expansion call.
