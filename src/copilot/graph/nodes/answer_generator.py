@@ -15,6 +15,25 @@ from copilot.vectorstore.models import RetrievedChunk
 _PUBLIC_ANGLE = {"external_current", "both"}
 
 
+def partial_private_applies(state: CopilotState, settings: Settings) -> bool:
+    """Experiment B (flag ``PARTIAL_PRIVATE_EVIDENCE``): may the grader's supporting chunks be used although it said insufficient?
+
+    Only for a question the classifier calls ``both``, when the grader itself says public information is also needed, is confident
+    at or above the private threshold, names valid supporting chunks and sees no contradiction. Never for an out-of-scope verdict.
+    """
+    if not settings.partial_private_evidence:
+        return False
+    grade = state.get("private_grade") or {}
+    cls = state.get("classification") or {}
+    return bool(
+        cls.get("intent") == "both"
+        and grade.get("needs_external_supplement")
+        and not grade.get("contradiction_detected")
+        and float(grade.get("confidence") or 0.0) >= float(grade.get("threshold") or settings.private_evidence_threshold)
+        and grade.get("supporting_chunk_ids")
+    )
+
+
 def _search_note(state: CopilotState, settings: Settings) -> str | None:
     """One user-facing sentence on the web search, chosen from state flags (never from model or document text).
 
@@ -75,10 +94,19 @@ def make_answer_generator(deps: GraphDeps):
 
         grade = state.get("private_grade") or {}
         items: list[EvidenceItem] = []
+        partial_private = False
         if grade.get("effective_sufficient"):
             by_id = {c["chunk_id"]: RetrievedChunk(**c) for c in state.get("retrieved_chunks", [])}
             selected = [by_id[i] for i in grade.get("selected_chunk_ids", []) if i in by_id]
             items = from_retrieved_chunks(selected)
+        elif partial_private_applies(state, deps.settings):
+            # EXPERIMENT B: the grader called the evidence insufficient only because part of the question needs current public
+            # information; the chunks it found to support the other part still go to the generator (already access-filtered
+            # at retrieval; no new retrieval path). The answer prompt already says to answer the supported part and state what is missing.
+            by_id = {c["chunk_id"]: RetrievedChunk(**c) for c in state.get("retrieved_chunks", [])}
+            selected = [by_id[i] for i in grade.get("supporting_chunk_ids", []) if i in by_id]
+            items = from_retrieved_chunks(selected)
+            partial_private = bool(items)
         for ext in state.get("accepted_external", []):
             items.append(EvidenceItem(
                 ref=len(items) + 1, kind="external", label=ext["title"], location=ext["domain"], text=ext["content"],
@@ -108,6 +136,7 @@ def make_answer_generator(deps: GraphDeps):
                 private_sources=sum(i.kind == "private" for i in items), external_sources=sum(i.kind == "external" for i in items),
                 citations=[c.ref for c in ans.citations], invalid_markers_removed=ans.invalid_markers_removed,
                 uncited_lines=len(ans.uncited_lines), revision=revising, out_of_scope_verdict_overridden=out_of_scope,
+                partial_private_used=partial_private,
             ),
         }
 

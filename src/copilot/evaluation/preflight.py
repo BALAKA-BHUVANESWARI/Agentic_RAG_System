@@ -91,7 +91,8 @@ def check_settings(v: Mapping[str, Any]) -> list[Check]:
         f"RETRIEVAL_MAX_CHUNKS_PER_DOC is {cap}; it stays off until a run shows it does no harm")
     add("full agent", bool(v.get("agent_use_grader")) and bool(v.get("agent_use_validator")), "grader and validator are on",
         "AGENT_USE_GRADER or AGENT_USE_VALIDATOR is false in the environment, so the 'agentic' system would be an ablation rung")
-    experiments = [name for name, key in (("A external_label_check_in_code", "external_label_check_in_code"),) if v.get(key)]
+    experiments = [name for name, key in (("A external_label_check_in_code", "external_label_check_in_code"),
+                                           ("B partial_private_evidence", "partial_private_evidence")) if v.get(key)]
     add("experiment flags", not experiments, "all experiment flags are off (the control configuration)",
         "experiment flag(s) ON: " + ", ".join(experiments) + "; make sure this is the arm planned in docs/POST_DAY3_EXPERIMENTS.md",
         "warn")

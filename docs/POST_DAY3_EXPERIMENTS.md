@@ -133,3 +133,18 @@ separately, among the mixed cases (G29-G32); decision rule (i) applies to the ex
 the control arm's external-only cases, and rule (iv) (read every external answer in the A arm for unsupported claims) is unchanged. The decision
 rules of B and C are untouched. No result had been seen when this amendment was written.
 
+## Amendment 2 (2026-11-24, before any run or result): what experiment B actually changes
+
+Implementing B showed two things that make it smaller than the text of Experiment B above:
+
+* **No generator prompt change.** `ANSWER_SYSTEM_PROMPT` rule 5 already says: if the evidence answers only part of the question, answer that part with
+  citations and state what the evidence does not establish. The text above ("the generator prompt gets one added instruction") is dropped.
+* **No grader change.** The private grade already stores `supporting_chunk_ids` even when the effective result is insufficient. The change is in the
+  `answer_generator` node only (`partial_private_applies`): with `PARTIAL_PRIVATE_EVIDENCE` on, the stored supporting chunks are used as private
+  evidence when the classifier intent is `both`, the grader says `needs_external_supplement`, `confidence` is at least the stored private threshold,
+  `supporting_chunk_ids` is non-empty and `contradiction_detected` is false. Routing (rewrite, external search, abstain) is unchanged, no retrieval path
+  is added (the chunks were access-filtered when they were retrieved), `effective_sufficient` and every metric built on it are unchanged, and a request
+  where the evidence is already sufficient takes the old branch. The answer event records `partial_private_used`.
+
+The hypothesis, primary measure and decision rule of B are unchanged. No result had been seen when this amendment was written.
+

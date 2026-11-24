@@ -111,7 +111,13 @@ class Settings(BaseSettings):
     # ABLATION switches for evaluation only: they measure what each agent step buys. Every default keeps the full workflow.
     agent_use_grader: bool = Field(default=True, description="False skips the LLM evidence grader: any retrieved chunk counts as sufficient (nothing retrieved still abstains).")
     agent_use_validator: bool = Field(default=True, description="False skips the final LLM grounding check; citation marker checks in the answer generator still run.")
-    # EXPERIMENT A (docs/POST_DAY3_EXPERIMENTS.md): default OFF so every recorded run keeps its meaning.
+    # EXPERIMENTS A and B (docs/POST_DAY3_EXPERIMENTS.md): default OFF so every recorded run keeps its meaning.
+    partial_private_evidence: bool = Field(
+        default=False,
+        description="True: when the classifier intent is 'both', the private grader found supporting chunks with confidence at or above "
+                    "the private threshold but marked the evidence insufficient only because the question also needs current public "
+                    "information, those supporting chunks still reach the answer generator (never a retrieval path of their own).",
+    )
     external_label_check_in_code: bool = Field(
         default=False,
         description="True: for an answer that cites ONLY external sources and starts with the required external-information line, "
